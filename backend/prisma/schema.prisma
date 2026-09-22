@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Article {
+  id          String    @id @default(uuid())
+  source      String
+  headline    String
+  summary     String?
+  body        String?
+  url         String    @unique
+  publishedAt DateTime
+  createdAt   DateTime  @default(now())
+  clusterId   String?
+  cluster     Cluster?  @relation(fields: [clusterId], references: [id], onDelete: SetNull)
+}
+
+model Cluster {
+  id        String    @id @default(uuid())
+  label     String
+  createdAt DateTime  @default(now())
+  articles  Article[]
+}
