@@ -20,7 +20,7 @@ const config: runtime.GetPrismaClientConfig = {
   "clientVersion": "7.10.0",
   "engineVersion": "0edf323efd1d98336f3f0a68684b56f689b900d3",
   "activeProvider": "postgresql",
-  "inlineSchema": "generator client {\n  provider = \"prisma-client\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n\nmodel Article {\n  id          String   @id @default(uuid())\n  source      String\n  headline    String\n  summary     String?\n  body        String?\n  url         String   @unique\n  publishedAt DateTime\n  createdAt   DateTime @default(now())\n  clusterId   String?\n  cluster     Cluster? @relation(fields: [clusterId], references: [id], onDelete: SetNull)\n}\n\nmodel Cluster {\n  id        String    @id @default(uuid())\n  label     String\n  createdAt DateTime  @default(now())\n  articles  Article[]\n}\n",
+  "inlineSchema": "generator client {\n  provider               = \"prisma-client\"\n  output                 = \"../src/generated/prisma\"\n  moduleFormat           = \"esm\"\n  generatedFileExtension = \"ts\"\n  importFileExtension    = \"ts\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n\nmodel Article {\n  id          String   @id @default(uuid())\n  source      String\n  headline    String\n  summary     String?\n  body        String?\n  url         String   @unique\n  publishedAt DateTime\n  createdAt   DateTime @default(now())\n  clusterId   String?\n  cluster     Cluster? @relation(fields: [clusterId], references: [id], onDelete: SetNull)\n}\n\nmodel Cluster {\n  id        String    @id @default(uuid())\n  label     String\n  createdAt DateTime  @default(now())\n  articles  Article[]\n}\n",
   "runtimeDataModel": {
     "models": {},
     "enums": {},
