@@ -21,6 +21,11 @@ model Article {
   createdAt   DateTime  @default(now())
   clusterId   String?
   cluster     Cluster?  @relation(fields: [clusterId], references: [id], onDelete: SetNull)
+
+  // Looking up a topic's articles (Prisma include, /clusters/:id, the
+  // "unclustered articles?" check) and reading articles in time order.
+  @@index([clusterId])
+  @@index([publishedAt])
 }
 
 model Cluster {

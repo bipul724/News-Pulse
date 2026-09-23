@@ -59,9 +59,9 @@ Prisma owns the schema (`backend/prisma/schema.prisma`) and its migrations. The 
 
 | Table | Written by | Key columns | Notes |
 | --- | --- | --- | --- |
-| `Article` | scraper | `url` UNIQUE, `publishedAt` (UTC), `clusterId` → `Cluster.id` | `body` is NULL when the publisher blocks extraction. Rows are never deleted |
+| `Article` | scraper | `url` UNIQUE, `publishedAt` (UTC), `clusterId` → `Cluster.id` | `body` is NULL when the publisher blocks extraction. Rows are never deleted. Indexed on `clusterId` and `publishedAt` |
 | `Cluster` | scraper | `id`, `label` | Rebuilt as a whole on each ingestion that changes data |
-| `IngestionJob` | API | `status`, `startedAt`, `completedAt`, `error`, metrics | Indexed on `status` and `createdAt` |
+| `IngestionJob` | API | `status`, `startedAt`, `completedAt`, `error`, metrics | Indexed on `status` and `createdAt`; a partial unique index allows only one queued/running job |
 
 - **Foreign key.** `Article.clusterId` has `ON DELETE SET NULL`, so deleting a cluster can never leave an article pointing at nothing.
 - **Timestamps.** Stored as `timestamp` columns holding UTC. The scraper pins its session to UTC before writing.
