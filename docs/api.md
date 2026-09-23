@@ -2,8 +2,9 @@
 
 The Node.js backend (`/backend`) serves everything the web app shows and controls ingestion runs. All responses are JSON. The examples below are real responses from a local instance, trimmed to one item where a list was long.
 
+- **Base URL (live):** `https://news-pulse-api-tgxl.onrender.com` (Render free tier; the first request after idling can take about a minute)
 - **Base URL (local):** `http://localhost:5001`, the `PORT` value in `backend/.env`
-- **CORS:** only the origin in `FRONTEND_URL` is allowed (default `http://localhost:3000`)
+- **CORS:** only the origin(s) listed in `FRONTEND_URL` are allowed, comma-separated (default `http://localhost:3000`)
 - **Authentication:** none (see [Security notes](#security-notes))
 - **Times:** ISO 8601 in UTC, e.g. `2026-09-23T09:02:59.000Z`
 - **IDs:** UUID v4 strings

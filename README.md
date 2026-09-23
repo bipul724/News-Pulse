@@ -2,7 +2,13 @@
 
 **A topic-clustered news timeline.** News Pulse collects live articles from BBC News, NPR and The New York Times. It groups articles that cover the same event into topic clusters and shows each topic on an interactive timeline, from its first article to its latest.
 
-**Live app:** _add your Vercel URL after deploying_ · **API:** _add your Render URL_ · **Video walkthrough:** _add link_
+| | |
+| --- | --- |
+| **Live app** | **<https://news-pulse-theta-sage.vercel.app>** · timeline: <https://news-pulse-theta-sage.vercel.app/timeline> |
+| **Live API** | <https://news-pulse-api-tgxl.onrender.com> · try [`/timeline`](https://news-pulse-api-tgxl.onrender.com/timeline), [`/clusters`](https://news-pulse-api-tgxl.onrender.com/clusters), [`/stats`](https://news-pulse-api-tgxl.onrender.com/stats), [`/health/db`](https://news-pulse-api-tgxl.onrender.com/health/db) |
+| **Video walkthrough** | _add link_ |
+
+> The API runs on Render's free tier, which sleeps after 15 idle minutes. The first request after that can take about a minute while it wakes up.
 
 ![News Pulse landing page with live data](docs/images/landing.png)
 
@@ -321,6 +327,8 @@ cd frontend && npm run lint && npm run build
 - **Scraper tests** cover URL and date normalization, malformed feeds and items, HTTP 403/404/timeouts, the clustering rules, labels, batched inserts, and transaction rollback.
 
 ## Deployment
+
+**Live:** web app <https://news-pulse-theta-sage.vercel.app> · API <https://news-pulse-api-tgxl.onrender.com>
 
 | Component | Runs on | Why |
 | --- | --- | --- |
