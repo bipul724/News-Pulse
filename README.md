@@ -1,5 +1,7 @@
 # News Pulse
 
+[![CI](https://github.com/bipul724/News-Pulse/actions/workflows/ci.yml/badge.svg)](https://github.com/bipul724/News-Pulse/actions/workflows/ci.yml)
+
 **A topic-clustered news timeline.** News Pulse collects live articles from BBC News, NPR and The New York Times. It groups articles that cover the same event into topic clusters and shows each topic on an interactive timeline, from its first article to its latest.
 
 | | |
@@ -308,6 +310,8 @@ These are the choices with trade-offs. The component READMEs explain each one in
 6. **No extra infrastructure.** No queue, cache, WebSocket or embeddings service. One database, one subprocess and polling are enough for this scale, and they are easy to reason about.
 
 ## Testing
+
+Every push and pull request runs all of the checks below on GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)), plus a build of the API's Docker image. They are fully offline: no database or secrets needed.
 
 ```bash
 # API: 31 tests, Prisma mocked, no database needed
