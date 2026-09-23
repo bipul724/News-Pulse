@@ -50,7 +50,14 @@ RSS feeds ──► normalize ──► skip known URLs ──► extract new pa
 - remove known tracking parameters only: `utm_*`, BBC's `at_medium` / `at_campaign`, `smid`, `fbclid`, `gclid`, `cmpid`. Every other parameter is kept and sorted.
 - http is not rewritten to https
 
-**Text.** Summaries have HTML stripped. BBC's "Related topics" block is removed as boilerplate (see Clustering for why).
+**Summaries** (`<description>` vs `<content:encoded>`):
+- `<description>` is used when present.
+- If it's missing, the cleaned `<content:encoded>` is used instead, cut to 500 characters.
+- Feeds use `<content:encoded>` differently. NPR puts a longer HTML intro there; NYT usually puts a photo caption. Either is real publisher text, which beats having no summary.
+- Stored articles that have no summary get one filled in on a later run, with one `UPDATE` that only touches empty summaries. That triggers a cluster rebuild, because their clustering text changed.
+- Items with neither field (e.g. NYT "Here's the latest." live blogs) keep an empty summary.
+
+**Text.** Summaries have HTML stripped (with no stray space before punctuation). BBC's "Related topics" block is removed as boilerplate (see Clustering for why).
 
 ## Duplicate strategy and re-runs
 
@@ -60,6 +67,7 @@ RSS feeds ──► normalize ──► skip known URLs ──► extract new pa
 4. Insert the new articles in one statement with `ON CONFLICT (url) DO NOTHING`. The database's `UNIQUE(url)` stays the final guard.
 5. Rebuild clusters only if something changed:
    - new rows were inserted, or
+   - a stored article gained a summary, or
    - some article has no cluster, or
    - no clusters exist yet.
 

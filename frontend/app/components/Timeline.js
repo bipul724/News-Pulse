@@ -9,6 +9,7 @@ const ROW_GAP = 6;
 const LANE_GAP_PX = 14;
 const MIN_BAR_PX = 10;
 const MAX_LABEL_PX = 340;
+const MIN_LABEL_PX = 60;
 const MIN_TICK_SPACING_PX = 110;
 const ZOOM_LEVELS = [1, 1.5, 2, 3, 4, 6];
 
@@ -97,19 +98,26 @@ export default function Timeline({ data, onSelectCluster, selectedClusterId, hig
       const inside = labelW + badgeW + 22 <= barW;
 
       let labelSide = 'inside';
+      let labelMaxW = labelW;
       let occStart = x;
       let occEnd = x + barW;
       if (!inside) {
-        const outsideW = labelW + badgeW + 10;
-        if (x + barW + outsideW <= contentWidth - 4) {
-          labelSide = 'right';
-          occEnd = x + barW + outsideW;
-        } else {
-          labelSide = 'left';
-          occStart = x - outsideW;
-        }
+        // Put the title beside the bar on whichever side has room. If neither
+        // side fits it whole, use the roomier side and shorten it with "…",
+        // so a label never runs past the edge of the chart.
+        const extra = badgeW + 10;
+        const roomRight = contentWidth - 4 - (x + barW);
+        const roomLeft = x - 4;
+        if (labelW + extra <= roomRight) labelSide = 'right';
+        else if (labelW + extra <= roomLeft) labelSide = 'left';
+        else labelSide = roomRight >= roomLeft ? 'right' : 'left';
+
+        const room = labelSide === 'right' ? roomRight : roomLeft;
+        labelMaxW = Math.max(MIN_LABEL_PX, Math.min(labelW, room - extra));
+        if (labelSide === 'right') occEnd = x + barW + labelMaxW + extra;
+        else occStart = x - labelMaxW - extra;
       }
-      return { cluster, x, barW, labelSide, occStart, occEnd };
+      return { cluster, x, barW, labelSide, labelMaxW, occStart, occEnd };
     });
 
     // Place the biggest stories first so they settle into the top lanes.
@@ -177,6 +185,14 @@ export default function Timeline({ data, onSelectCluster, selectedClusterId, hig
   const lanesHeight = layout ? layout.laneCount * (ROW_H + ROW_GAP) + 24 : 200;
   const nowX = layout && now >= layout.minTime && now <= layout.maxTime ? layout.toX(now) : null;
   const firstDayLabelVisible = layout && !layout.ticks.some(t => t.isMidnight && t.x < 140);
+  // Tick labels that would collide with the pinned first-day label, the "Now"
+  // label or the chart edges are dropped; their grid lines stay.
+  const axisTicks = layout
+    ? layout.ticks.filter(t =>
+        t.x > (firstDayLabelVisible ? 120 : 30) &&
+        t.x < contentWidth - 30 &&
+        (nowX === null || Math.abs(t.x - nowX) > 48))
+    : [];
 
   return (
     <div className="flex flex-col bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
@@ -243,7 +259,7 @@ export default function Timeline({ data, onSelectCluster, selectedClusterId, hig
               {firstDayLabelVisible && layout.days[0] && (
                 <span className="absolute left-3 top-2.5 text-[11px] font-bold text-stone-800">{layout.days[0].label}</span>
               )}
-              {layout.ticks.map(tick => (
+              {axisTicks.map(tick => (
                 <span
                   key={tick.t}
                   className={`absolute top-2.5 -translate-x-1/2 whitespace-nowrap text-[11px] ${tick.isMidnight ? 'font-bold text-stone-800' : 'font-medium text-stone-500'}`}
@@ -252,18 +268,25 @@ export default function Timeline({ data, onSelectCluster, selectedClusterId, hig
                   {formatTick(tick)}
                 </span>
               ))}
+              {nowX !== null && (
+                <span
+                  className="absolute top-2.5 -translate-x-1/2 text-[10px] font-bold uppercase tracking-wider text-accent-600"
+                  style={{ left: nowX }}
+                >
+                  Now
+                </span>
+              )}
             </div>
 
             {/* Now marker */}
             {nowX !== null && (
-              <div className="absolute top-9 bottom-0 z-10 pointer-events-none" style={{ left: nowX }}>
-                <div className="w-px h-full bg-accent-500" />
-                <span className="absolute top-1 left-1 text-[10px] font-bold uppercase tracking-wider text-accent-600">Now</span>
+              <div className="absolute top-9 bottom-0 pointer-events-none" style={{ left: nowX }}>
+                <div className="w-px h-full bg-accent-500/70" />
               </div>
             )}
 
             {/* Clusters */}
-            {layout.items.map(({ cluster, x, barW, labelSide, lane }) => {
+            {layout.items.map(({ cluster, x, barW, labelSide, labelMaxW, lane }) => {
               const styles = TIER_STYLES[coverageTier(cluster.intensity)];
               const isSelected = cluster.id === selectedClusterId;
               const isDimmed = highlightIds && !highlightIds.has(cluster.id);
@@ -308,7 +331,7 @@ export default function Timeline({ data, onSelectCluster, selectedClusterId, hig
                     <span className={`flex items-center gap-1.5 whitespace-nowrap ${labelSide === 'left' ? 'pr-2' : 'pl-2'}`}>
                       <span
                         className={`truncate text-xs font-semibold group-hover:text-accent-700 ${isSelected ? 'text-stone-950 underline decoration-2 underline-offset-2' : 'text-stone-700'}`}
-                        style={{ maxWidth: MAX_LABEL_PX }}
+                        style={{ maxWidth: labelMaxW + 2 }}
                       >
                         {cluster.label}
                       </span>

@@ -73,6 +73,27 @@ class TestInsertArticles(unittest.TestCase):
 
 
 @patch("src.storage.postgres.psycopg.connect")
+class TestFillMissingSummaries(unittest.TestCase):
+    def test_only_empty_summaries_are_filled_in_one_statement(self, connect):
+        storage, conn, cur = make_storage(connect)
+        cur.rowcount = 1
+        known = [dict(ARTICLE, summary="From content:encoded"), dict(ARTICLE, url="https://x.com/none", summary="")]
+
+        self.assertEqual(storage.fill_missing_summaries(known), 1)
+
+        sql, (urls, summaries) = cur.execute.call_args.args
+        self.assertIn("a.summary IS NULL OR a.summary = ''", sql)
+        self.assertEqual(urls, [ARTICLE["url"]])        # articles without a summary are not sent
+        self.assertEqual(summaries, ["From content:encoded"])
+        conn.transaction.assert_called_once()
+
+    def test_nothing_to_fill_skips_the_database(self, connect):
+        storage, conn, cur = make_storage(connect)
+        self.assertEqual(storage.fill_missing_summaries([dict(ARTICLE, summary=None)]), 0)
+        cur.execute.assert_not_called()
+
+
+@patch("src.storage.postgres.psycopg.connect")
 class TestExistingUrls(unittest.TestCase):
     def test_stored_urls_are_normalized_for_comparison(self, connect):
         storage, conn, cur = make_storage(connect)

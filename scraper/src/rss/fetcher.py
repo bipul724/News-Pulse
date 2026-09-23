@@ -13,6 +13,8 @@ from src.utils.urls import normalize_url
 logger = logging.getLogger(__name__)
 
 FEED_TIMEOUT_SECONDS = 15
+# content:encoded can hold a whole article; a summary only needs the opening.
+MAX_SUMMARY_CHARS = 500
 HEADERS = {"User-Agent": "NewsPulseBot/1.0"}
 
 
@@ -37,6 +39,29 @@ def source_name(feed_title, feed_url):
     """
     title = WHITESPACE.sub(" ", feed_title or "").strip()
     return title or urlsplit(feed_url).hostname or "Unknown source"
+
+
+def entry_summary(entry):
+    """
+    The item's short description. Feeds differ: most use <description>
+    (feedparser: `summary`), some only fill <content:encoded> (feedparser:
+    `content`). NPR puts a longer HTML intro there; NYT often puts a photo
+    caption. Either is real publisher text, used only when <description> is empty.
+    """
+    summary = clean_html(entry.get("summary") or entry.get("description") or "")
+    if summary:
+        return summary
+    for block in entry.get("content") or []:
+        text = clean_html(block.get("value", ""))
+        if text:
+            return shorten_text(text, MAX_SUMMARY_CHARS)
+    return ""
+
+
+def shorten_text(text, limit):
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1].rsplit(" ", 1)[0].rstrip(" ,;:") + "…"
 
 
 def parse_entry(entry, source, fetched_at):
@@ -67,7 +92,7 @@ def parse_entry(entry, source, fetched_at):
     article = {
         "source": source,
         "headline": headline,
-        "summary": clean_html(entry.get("summary") or entry.get("description") or ""),
+        "summary": entry_summary(entry),
         "url": url,
         "publishedAt": published_at,
         "body": None,

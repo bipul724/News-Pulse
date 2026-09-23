@@ -90,6 +90,31 @@ class PostgresStorage:
             logger.info(f"[DB] {len(articles) - inserted} skipped by ON CONFLICT (url already stored)")
         return inserted
 
+    def fill_missing_summaries(self, articles):
+        """
+        Gives already-stored articles a summary if they have none yet, e.g.
+        rows saved before <content:encoded> was read. Only empty summaries
+        are touched, so running it again changes nothing. Returns rows updated.
+        """
+        pairs = [(a["url"], a["summary"]) for a in articles if a.get("summary")]
+        if not pairs:
+            return 0
+        urls, summaries = zip(*pairs)
+        with self.conn.transaction(), self.conn.cursor() as cur:
+            cur.execute(
+                '''
+                UPDATE "Article" AS a
+                SET summary = v.summary
+                FROM unnest(%s::text[], %s::text[]) AS v(url, summary)
+                WHERE a.url = v.url AND (a.summary IS NULL OR a.summary = '')
+                ''',
+                (list(urls), list(summaries)),
+            )
+            updated = cur.rowcount
+        if updated:
+            logger.info(f"[DB] Filled {updated} missing summaries on stored articles")
+        return updated
+
     def get_articles_for_clustering(self, max_body_chars):
         """
         Every stored article, in a fixed order so clustering is reproducible.

@@ -13,9 +13,11 @@ def article(url, headline):
 
 
 class FakeStorage:
-    def __init__(self, existing_urls=(), unclustered=False):
+    def __init__(self, existing_urls=(), unclustered=False, summaries_to_fill=0):
         self.existing_urls = set(existing_urls)
         self.unclustered = unclustered
+        self.summaries_to_fill = summaries_to_fill
+        self.fill_calls = []
         self.inserted = []
         self.replaced = None
 
@@ -25,6 +27,10 @@ class FakeStorage:
     def insert_articles(self, articles):
         self.inserted.extend(articles)
         return len(articles)
+
+    def fill_missing_summaries(self, articles):
+        self.fill_calls.append([a["url"] for a in articles])
+        return self.summaries_to_fill
 
     def needs_recluster(self):
         return self.unclustered
@@ -76,6 +82,19 @@ class TestRunPipeline(unittest.TestCase):
             stats = run_pipeline(storage, ["https://x.com/rss"])
         self.assertIsNotNone(storage.replaced)
         self.assertEqual(stats.recluster_reason, "unclustered articles found")
+
+    def test_known_articles_are_offered_for_summary_backfill(self, extract):
+        storage = FakeStorage(existing_urls={"https://x.com/known"})
+        with patch("src.main.fetch_feeds", fake_fetch()):
+            run_pipeline(storage, ["https://x.com/rss"])
+        self.assertEqual(storage.fill_calls, [["https://x.com/known"]])
+
+    def test_filled_summaries_trigger_a_rebuild(self, extract):
+        storage = FakeStorage(existing_urls={"https://x.com/known", "https://x.com/new"}, summaries_to_fill=2)
+        with patch("src.main.fetch_feeds", fake_fetch()):
+            stats = run_pipeline(storage, ["https://x.com/rss"])
+        self.assertIsNotNone(storage.replaced)
+        self.assertEqual(stats.recluster_reason, "2 articles gained a summary")
 
     def test_force_recluster(self, extract):
         storage = FakeStorage(existing_urls={"https://x.com/known", "https://x.com/new"})

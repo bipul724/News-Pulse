@@ -103,7 +103,7 @@ news-pulse/
 │   │   ├── grouping/            TF-IDF clustering and labels
 │   │   ├── storage/postgres.py  batched inserts, transactional cluster rebuild
 │   │   └── utils/               URL, date and text normalization
-│   └── tests/                   85 offline unit tests + opt-in live checks
+│   └── tests/                   94 offline unit tests + opt-in live checks
 │
 ├── backend/                     Node.js REST API
 │   ├── prisma/                  schema.prisma + migrations
@@ -303,7 +303,7 @@ These are the choices with trade-offs. The component READMEs explain each one in
 # API: 28 tests, Prisma mocked, no database needed
 cd backend && npm test
 
-# Scraper: 85 tests, fully offline
+# Scraper: 94 tests, fully offline
 cd scraper && python3 -m unittest discover -s tests -v
 
 # Scraper: optional read-only live checks (real feeds + database)

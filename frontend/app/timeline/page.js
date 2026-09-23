@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import Link from 'next/link';
 import Timeline from '../components/Timeline';
 import ClusterList from '../components/ClusterList';
 import SourceFilter from '../components/SourceFilter';
 import ClusterDrawer from '../components/ClusterDrawer';
 import RefreshButton from '../components/RefreshButton';
+import { BrandLink } from '../components/Brand';
 import { registerSources, timeAgo } from '../lib/format';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
@@ -110,8 +110,10 @@ export default function TimelinePage() {
   // Restore view preference and a shared ?topic= link on first load.
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
-      const storedView = readStored('newsPulse.view', 'timeline');
+      const storedView = readStored('newsPulse.view', null);
       if (storedView === 'list' || storedView === 'timeline') setView(storedView);
+      // Phones open in the list view unless the viewer has already chosen one.
+      else if (window.matchMedia('(max-width: 639px)').matches) setView('list');
       const topic = new URLSearchParams(window.location.search).get('topic');
       if (topic) setSelectedClusterId(topic);
     });
@@ -210,24 +212,36 @@ export default function TimelinePage() {
 
   return (
     <main className="min-h-screen bg-paper pb-16 text-stone-900">
-      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 pt-8 sm:px-6 lg:px-8">
-        <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <div className="mb-1 flex items-center gap-3">
-              <Link href="/" className="font-display text-4xl font-semibold tracking-tight text-stone-900 transition-colors hover:text-accent-600">
-                News Pulse
-              </Link>
-              <span className="flex items-center gap-1.5 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-emerald-700">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" /> Live
-              </span>
-            </div>
-            <p className="text-sm text-stone-500">
-              Topic-clustered news intelligence
-              {lastFetched && <span className="text-stone-400"> · synced {timeAgo(lastFetched, now)}</span>}
-            </p>
+      <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-paper/90 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center gap-3">
+            <BrandLink />
+            <span className="hidden text-stone-300 sm:inline" aria-hidden="true">/</span>
+            <span className="hidden text-sm font-medium text-stone-600 sm:inline">Timeline</span>
           </div>
-          <RefreshButton onRefreshComplete={fetchTimeline} apiUrl={API_URL} />
-        </header>
+          <div className="flex items-center gap-4">
+            {lastFetched && !error && (
+              <span className="hidden items-center gap-1.5 text-xs text-stone-500 md:flex">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                Live · synced {timeAgo(lastFetched, now)}
+              </span>
+            )}
+            <RefreshButton onRefreshComplete={fetchTimeline} apiUrl={API_URL} />
+          </div>
+        </div>
+      </header>
+
+      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 pt-8 sm:px-6 lg:px-8">
+        <div>
+          <h1 className="font-display text-3xl font-medium tracking-tight text-stone-900 sm:text-4xl">Topic timeline</h1>
+          <p className="mt-1.5 text-sm text-stone-500">
+            {loading
+              ? 'Loading the latest coverage…'
+              : timelineData.length
+                ? `${stats.topics} topics from ${stats.articles} articles, grouped by event. Click any topic to read its coverage.`
+                : 'No coverage yet.'}
+          </p>
+        </div>
 
         {error && (
           <div className="flex items-center justify-between gap-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -239,7 +253,7 @@ export default function TimelinePage() {
         )}
 
         {!loading && timelineData.length > 0 && (
-          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <section className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-stone-200 bg-stone-200 lg:grid-cols-4">
             <StatCard label="Topics" value={stats.topics} hint={`${stats.multiSource} covered by 2+ sources`} />
             <StatCard label="Articles" value={stats.articles} hint={`from ${selectedSources.size} of ${sources.length} sources`} />
             <StatCard
@@ -371,10 +385,10 @@ function StatCard({ label, value, hint, onClick }) {
   return (
     <Tag
       onClick={onClick}
-      className={`min-w-0 rounded-xl border border-stone-200 bg-white p-4 text-left shadow-sm ${onClick ? 'transition-colors hover:border-accent-300 hover:bg-accent-50/30' : ''}`}
+      className={`group min-w-0 bg-white px-4 py-3.5 text-left ${onClick ? 'transition-colors hover:bg-accent-50/40' : ''}`}
     >
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">{label}</div>
-      <div className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-stone-900">{value}</div>
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">{label}</div>
+      <div className={`mt-0.5 text-xl font-bold tabular-nums tracking-tight text-stone-900 ${onClick ? 'group-hover:text-accent-700' : ''}`}>{value}</div>
       {hint && <div className="mt-1 truncate text-xs text-stone-500" title={hint}>{hint}</div>}
     </Tag>
   );

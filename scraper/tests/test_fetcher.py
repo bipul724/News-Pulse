@@ -4,12 +4,12 @@ from unittest.mock import MagicMock, patch
 
 import requests
 
-from src.rss.fetcher import fetch_feed, fetch_feeds, parse_entry, source_name
+from src.rss.fetcher import MAX_SUMMARY_CHARS, entry_summary, fetch_feed, fetch_feeds, parse_entry, source_name
 
 FETCHED_AT = datetime(2026, 9, 23, 12, 0, tzinfo=timezone.utc)
 
 RSS = b"""<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0"><channel>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel>
   <title>  BBC News  </title>
   <item>
     <title>Sri Lanka court convicts 15 over Easter bombings</title>
@@ -23,6 +23,12 @@ RSS = b"""<?xml version="1.0" encoding="UTF-8"?>
   </item>
   <item>
     <title>Item without a link</title>
+  </item>
+  <item>
+    <title>Item with only content:encoded</title>
+    <link>https://www.bbc.co.uk/news/articles/content-only</link>
+    <content:encoded><![CDATA[<p>Body text supplied only as <b>content:encoded</b>.</p>]]></content:encoded>
+    <pubDate>Tue, 22 Sep 2026 11:00:00 GMT</pubDate>
   </item>
   <item>
     <title>Item with a broken date</title>
@@ -73,6 +79,30 @@ class TestParseEntry(unittest.TestCase):
         self.assertIsNone(note)
 
 
+class TestEntrySummary(unittest.TestCase):
+    def test_description_is_preferred(self):
+        entry = {"summary": "<p>Short description.</p>", "content": [{"value": "<p>Much longer body text.</p>"}]}
+        self.assertEqual(entry_summary(entry), "Short description.")
+
+    def test_content_encoded_is_used_when_description_is_missing(self):
+        # NYT-style item: no <description>, only <content:encoded>.
+        entry = {"content": [{"value": "<p>Prime Minister Sanae Takaichi of Japan was expected to meet with President Trump.</p>"}]}
+        self.assertEqual(entry_summary(entry), "Prime Minister Sanae Takaichi of Japan was expected to meet with President Trump.")
+
+    def test_long_content_encoded_is_cut_on_a_word_boundary(self):
+        entry = {"content": [{"value": "<p>" + "word " * 300 + "</p>"}]}
+        summary = entry_summary(entry)
+        self.assertLessEqual(len(summary), MAX_SUMMARY_CHARS)
+        self.assertTrue(summary.endswith("word…"))
+
+    def test_empty_content_blocks_are_skipped(self):
+        entry = {"content": [{"value": "<p> </p>"}, {"value": "Second block text."}]}
+        self.assertEqual(entry_summary(entry), "Second block text.")
+
+    def test_neither_field_gives_empty_summary(self):
+        self.assertEqual(entry_summary({"title": "Here's the latest."}), "")
+
+
 class TestSourceName(unittest.TestCase):
     def test_uses_trimmed_feed_title(self):
         self.assertEqual(source_name("  NYT >  World News ", "https://rss.nytimes.com/x.xml"), "NYT > World News")
@@ -91,8 +121,10 @@ class TestFetchFeed(unittest.TestCase):
         self.assertEqual(result.source, "BBC News")
         self.assertEqual([a["url"] for a in result.articles], [
             "https://www.bbc.co.uk/news/articles/abc",
+            "https://www.bbc.co.uk/news/articles/content-only",
             "https://www.bbc.co.uk/news/articles/bad-date",
         ])
+        self.assertEqual(result.articles[1]["summary"], "Body text supplied only as content:encoded.")
         self.assertEqual(result.skipped, 2)          # no title, no link
         self.assertEqual(result.date_fallbacks, 1)   # "not a date"
         self.assertEqual(result.articles[0]["summary"], "A court has convicted 15 men.")
@@ -120,11 +152,11 @@ class TestFetchFeed(unittest.TestCase):
     def test_exception_in_one_item_does_not_lose_the_feed(self, get, parse):
         get.return_value = response(RSS)
         good = {"url": "https://x.com/ok", "headline": "ok"}
-        parse.side_effect = [RuntimeError("boom"), (good, None), (None, "missing title"), (dict(good, url="https://x.com/2"), None)]
+        parse.side_effect = [RuntimeError("boom"), (good, None), (None, "missing title"), (dict(good, url="https://x.com/2"), None), (None, "missing title")]
         result = fetch_feed("https://example.com/rss")
         self.assertTrue(result.ok)
         self.assertEqual(len(result.articles), 2)
-        self.assertEqual(result.skipped, 2)
+        self.assertEqual(result.skipped, 3)
 
 
 class TestFetchFeeds(unittest.TestCase):
@@ -139,14 +171,14 @@ class TestFetchFeeds(unittest.TestCase):
         articles, results = fetch_feeds(["https://broken.example.com/rss", "https://feeds.bbci.co.uk/rss"])
 
         self.assertEqual([r.ok for r in results], [False, True])
-        self.assertEqual(len(articles), 2)
+        self.assertEqual(len(articles), 3)
 
     @patch("src.rss.fetcher.requests.get")
     def test_same_article_in_two_feeds_is_kept_once(self, get):
         get.return_value = response(RSS)
         articles, _ = fetch_feeds(["https://a.example.com/rss", "https://b.example.com/rss"])
-        self.assertEqual(len(articles), 2)
-        self.assertEqual(len({a["url"] for a in articles}), 2)
+        self.assertEqual(len(articles), 3)
+        self.assertEqual(len({a["url"] for a in articles}), 3)
 
 
 if __name__ == "__main__":

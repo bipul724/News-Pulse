@@ -44,6 +44,7 @@ class RunStats:
     feeds_ok: int = 0
     fetched: int = 0
     already_known: int = 0
+    summaries_filled: int = 0
     new_candidates: int = 0
     inserted: int = 0
     extraction: dict = field(default_factory=dict)
@@ -71,6 +72,8 @@ def run_pipeline(storage, feed_urls, force_recluster=False):
     existing_urls = storage.get_existing_urls()
     new_articles = [a for a in articles if a["url"] not in existing_urls]
     stats.already_known = stats.fetched - len(new_articles)
+    known_articles = [a for a in articles if a["url"] in existing_urls]
+    stats.summaries_filled = storage.fill_missing_summaries(known_articles)
     stats.new_candidates = len(new_articles)
     logger.info(f"[PIPELINE] Found {stats.new_candidates} new articles to process ({stats.already_known} already known)")
 
@@ -90,6 +93,8 @@ def run_pipeline(storage, feed_urls, force_recluster=False):
         stats.recluster_reason = "forced with --force-recluster"
     elif stats.inserted:
         stats.recluster_reason = f"{stats.inserted} new articles"
+    elif stats.summaries_filled:
+        stats.recluster_reason = f"{stats.summaries_filled} articles gained a summary"
     elif storage.needs_recluster():
         stats.recluster_reason = "unclustered articles found"
 
@@ -117,7 +122,8 @@ def log_summary(stats):
         "=" * 50,
         f"Feeds processed:        {stats.feeds_ok}/{stats.feeds_total}",
         f"RSS articles fetched:   {stats.fetched}",
-        f"Already known:          {stats.already_known}",
+        f"Already known:          {stats.already_known}"
+        + (f" ({stats.summaries_filled} given a missing summary)" if stats.summaries_filled else ""),
         f"New articles:           {stats.new_candidates} found, {stats.inserted} inserted",
         f"Extraction success:     {ex.get(EXTRACTED, 0)}",
         f"Extraction unavailable: {unavailable}"

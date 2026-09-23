@@ -11,6 +11,8 @@ BOILERPLATE_PATTERNS = [
 ]
 
 WHITESPACE = re.compile(r"\s+")
+# Joining HTML fragments with spaces leaves "word ." after inline tags like <b>.
+SPACE_BEFORE_PUNCTUATION = re.compile(r"\s+([.,;:!?])")
 
 
 def clean_html(raw_html):
@@ -18,7 +20,7 @@ def clean_html(raw_html):
     if not raw_html:
         return ""
     text = BeautifulSoup(raw_html, "html.parser").get_text(separator=" ", strip=True)
-    return WHITESPACE.sub(" ", text).strip()
+    return SPACE_BEFORE_PUNCTUATION.sub(r"\1", WHITESPACE.sub(" ", text)).strip()
 
 
 def strip_boilerplate(text):
