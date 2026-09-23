@@ -19,27 +19,27 @@ class TestPipeline(unittest.TestCase):
     def test_clustering_produces_expected_groups(self):
         articles = [
             {
-                "_id": "1",
+                "id": "1",
                 "guid": "guid1",
-                "title": "Apple releases new iPhone",
+                "headline": "Apple releases new iPhone",
                 "summary": "The tech giant announced its latest smartphone.",
-                "content": "Full text about the new iPhone.",
+                "body": "Full text about the new iPhone.",
                 "publishedAt": datetime(2026, 9, 22, 10, 0, tzinfo=timezone.utc)
             },
             {
-                "_id": "2",
+                "id": "2",
                 "guid": "guid2",
-                "title": "New Apple iPhone 15 features",
+                "headline": "New Apple iPhone 15 features",
                 "summary": "Everything you need to know about the smartphone.",
-                "content": "It has a better camera and screen.",
+                "body": "It has a better camera and screen.",
                 "publishedAt": datetime(2026, 9, 22, 11, 0, tzinfo=timezone.utc)
             },
             {
-                "_id": "3",
+                "id": "3",
                 "guid": "guid3",
-                "title": "Fed raises interest rates again",
+                "headline": "Fed raises interest rates again",
                 "summary": "Central bank hikes rates by 25 basis points.",
-                "content": "Inflation concerns drive the decision.",
+                "body": "Inflation concerns drive the decision.",
                 "publishedAt": datetime(2026, 9, 22, 9, 0, tzinfo=timezone.utc)
             }
         ]
