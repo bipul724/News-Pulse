@@ -53,4 +53,10 @@ describe('API Endpoints integration with mocked Prisma', () => {
     const res = await request(app).get('/clusters/0f8fad5b-d9cb-469f-a165-70867728950e');
     expect(res.status).toBe(404);
   });
+
+  test('unknown routes return 404 with code NOT_FOUND', async () => {
+    const res = await request(app).get('/does-not-exist');
+    expect(res.status).toBe(404);
+    expect(res.body.error).toEqual({ message: 'Not Found - /does-not-exist', code: 'NOT_FOUND' });
+  });
 });

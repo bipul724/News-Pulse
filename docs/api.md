@@ -34,8 +34,7 @@ Errors share one shape:
 | Status | `code` | When |
 | --- | --- | --- |
 | 400 | `INVALID_ID` | A path ID is not a UUID |
-| 404 | `NOT_FOUND` | The cluster or job does not exist |
-| 404 | `INTERNAL_SERVER_ERROR` | Unknown route. The status is right; the code is a known quirk of the catch-all handler |
+| 404 | `NOT_FOUND` | The cluster, job or route does not exist |
 | 409 | `CONCURRENT_INGESTION_CONFLICT` | An ingestion job is already queued or running (includes `jobId`) |
 | 500 | `INTERNAL_SERVER_ERROR` | Unexpected failure, e.g. the database is unreachable |
 | 503 | — | Only from `/health/db`; body is `{"status":"error","database":"unavailable"}` |
