@@ -6,6 +6,14 @@ export default function RefreshButton({ onRefreshComplete, apiUrl }) {
   const [status, setStatus] = useState('idle'); // idle, triggering, running, error
   const [errorMsg, setErrorMsg] = useState('');
   const [jobId, setJobId] = useState(null);
+  const [startedAt, setStartedAt] = useState(null);
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!startedAt) return;
+    const timer = setInterval(() => setElapsed(Math.round((Date.now() - startedAt) / 1000)), 1000);
+    return () => clearInterval(timer);
+  }, [startedAt]);
 
   useEffect(() => {
     let interval = null;
@@ -22,6 +30,7 @@ export default function RefreshButton({ onRefreshComplete, apiUrl }) {
           if (mounted) {
             setStatus('success'); // Use intermediate state
             setJobId(null);
+            setStartedAt(null);
             onRefreshComplete();
             setTimeout(() => {
               if (mounted) setStatus('idle');
@@ -30,8 +39,9 @@ export default function RefreshButton({ onRefreshComplete, apiUrl }) {
         } else if (data.status === 'failed') {
           if (mounted) {
             setStatus('error');
-            setErrorMsg('Pipeline failed');
+            setErrorMsg('Refresh failed. Existing data is still shown.');
             setJobId(null);
+            setStartedAt(null);
           }
         }
       } catch (err) {
@@ -53,6 +63,8 @@ export default function RefreshButton({ onRefreshComplete, apiUrl }) {
     try {
       setStatus('triggering');
       setErrorMsg('');
+      setStartedAt(Date.now());
+      setElapsed(0);
 
       const res = await fetch(`${apiUrl}/ingest/trigger`, {
         method: 'POST',
@@ -75,8 +87,9 @@ export default function RefreshButton({ onRefreshComplete, apiUrl }) {
     } catch (err) {
       console.error(err);
       setStatus('error');
-      setErrorMsg('Failed to start');
+      setErrorMsg('Could not start refresh.');
       setJobId(null);
+      setStartedAt(null);
     }
   };
 
@@ -98,10 +111,11 @@ export default function RefreshButton({ onRefreshComplete, apiUrl }) {
     return (
       <button 
         disabled
-        className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-bold flex items-center gap-2"
+        className="px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-lg text-sm font-semibold flex items-center gap-2"
       >
         <span className="animate-spin inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full" />
-        ⟳ Refreshing News...
+        Refreshing news…
+        <span className="text-xs font-medium tabular-nums opacity-70">{elapsed}s</span>
       </button>
     );
   }

@@ -57,6 +57,7 @@ export const getClusterById = async (req, res, next) => {
       articles: cluster.articles.map(article => ({
         id: article.id,
         headline: article.headline,
+        summary: article.summary,
         source: article.source,
         publishedAt: article.publishedAt,
         url: article.url,

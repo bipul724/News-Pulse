@@ -1,17 +1,23 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { formatDateTime, formatDuration, formatTime, shortSource, sourceColor, stripHtml } from '../lib/format';
 
-export default function ClusterDrawer({ clusterId, onClose, apiUrl }) {
+export default function ClusterDrawer({ clusterId, onClose, onPrev, onNext, position, apiUrl }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sourceFilter, setSourceFilter] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const closeRef = useRef(null);
 
   useEffect(() => {
     let active = true;
     const fetchCluster = async () => {
       try {
         setLoading(true);
+        setSourceFilter(null);
         const res = await fetch(`${apiUrl}/clusters/${clusterId}`);
         if (!res.ok) throw new Error('Failed to fetch cluster details');
         const json = await res.json();
@@ -21,99 +27,252 @@ export default function ClusterDrawer({ clusterId, onClose, apiUrl }) {
         }
       } catch (err) {
         if (active) {
-          setError('Unable to load articles.');
+          setError('Unable to load articles for this topic.');
           console.error(err);
         }
       } finally {
         if (active) setLoading(false);
       }
     };
-    
-    if (clusterId) {
-      fetchCluster();
-    }
+
+    if (clusterId) fetchCluster();
     return () => { active = false; };
-  }, [clusterId, apiUrl]);
+  }, [clusterId, apiUrl, reloadKey]);
+
+  useEffect(() => {
+    closeRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.target instanceof HTMLElement && e.target.closest('input, textarea')) return;
+      if (e.key === 'Escape') onClose();
+      else if (e.key === 'ArrowLeft' || e.key === 'k') onPrev?.();
+      else if (e.key === 'ArrowRight' || e.key === 'j') onNext?.();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose, onPrev, onNext]);
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const cluster = data?.cluster;
+  const articles = data?.articles ?? [];
+  const sourceCounts = articles.reduce((acc, a) => {
+    acc[a.source] = (acc[a.source] || 0) + 1;
+    return acc;
+  }, {});
+  const sourceEntries = Object.entries(sourceCounts).sort((a, b) => b[1] - a[1]);
+  const visibleArticles = (sourceFilter ? articles.filter(a => a.source === sourceFilter) : articles)
+    .map((article, i, list) => ({
+      ...article,
+      showDay: i === 0 || new Date(list[i - 1].publishedAt).toDateString() !== new Date(article.publishedAt).toDateString(),
+    }));
+  const start = cluster?.start ? new Date(cluster.start).getTime() : null;
+  const end = cluster?.end ? new Date(cluster.end).getTime() : null;
 
   return (
     <>
-      <div 
-        className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-40 transition-opacity"
-        onClick={onClose}
-      />
-      
-      <div className="fixed top-0 right-0 h-full w-full md:w-[480px] bg-white shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ease-out border-l border-slate-200">
-        <header className="sticky top-0 bg-white/95 backdrop-blur border-b border-slate-200 px-6 py-4 flex justify-between items-start z-10">
-          <div className="flex-1 pr-4">
-            <h2 className="text-xl font-bold text-slate-900 leading-tight mb-1">
-              {data?.cluster?.label || (loading ? 'Loading cluster...' : 'Cluster Details')}
-            </h2>
-            {data && !loading && (
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                {data.cluster.articleCount} Articles &middot; {new Date(data.cluster.start).toLocaleDateString()}
-              </p>
-            )}
+      <div className="fixed inset-0 z-40 bg-slate-900/30 backdrop-blur-[2px] animate-fade-in" onClick={onClose} />
+
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cluster-drawer-title"
+        className="fixed right-0 top-0 z-50 flex h-full w-full flex-col border-l border-slate-200 bg-white shadow-2xl md:w-[520px] animate-slide-in"
+      >
+        <header className="border-b border-slate-200 px-6 pb-4 pt-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1">
+              <button
+                onClick={onPrev}
+                disabled={!onPrev}
+                aria-label="Previous topic"
+                className="h-8 w-8 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 disabled:opacity-30 disabled:hover:bg-transparent"
+              >
+                ←
+              </button>
+              <button
+                onClick={onNext}
+                disabled={!onNext}
+                aria-label="Next topic"
+                className="h-8 w-8 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 disabled:opacity-30 disabled:hover:bg-transparent"
+              >
+                →
+              </button>
+              {position && (
+                <span className="ml-1 text-xs font-medium tabular-nums text-slate-400">
+                  {position.index + 1} of {position.total}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={copyLink}
+                className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+              >
+                {copied ? '✓ Copied' : 'Copy link'}
+              </button>
+              <button
+                ref={closeRef}
+                onClick={onClose}
+                aria-label="Close"
+                className="h-8 w-8 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              >
+                ✕
+              </button>
+            </div>
           </div>
-          <button 
-            onClick={onClose}
-            aria-label="Close"
-            className="p-2 -mr-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
-          >
-            ✕
-          </button>
+
+          {loading && !cluster ? (
+            <div className="animate-pulse space-y-2">
+              <div className="h-6 w-4/5 rounded bg-slate-100" />
+              <div className="h-4 w-1/2 rounded bg-slate-100" />
+            </div>
+          ) : cluster ? (
+            <>
+              <h2 id="cluster-drawer-title" className="text-xl font-bold leading-tight tracking-tight text-slate-900">
+                {cluster.label}
+              </h2>
+              <dl className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                <Stat label="Articles" value={cluster.articleCount} />
+                <Stat label="Sources" value={sourceEntries.length} />
+                <Stat label="Active for" value={formatDuration(end - start)} />
+              </dl>
+              <p className="mt-3 text-xs text-slate-500">
+                {formatDateTime(start)}{end !== start && <> → {formatDateTime(end)}</>}
+              </p>
+
+              {sourceEntries.length > 0 && (
+                <div className="mt-4">
+                  <div className="flex h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                    {sourceEntries.map(([name, count]) => (
+                      <div key={name} className={sourceColor(name).dot} style={{ width: `${(count / articles.length) * 100}%` }} />
+                    ))}
+                  </div>
+                  <div className="mt-2.5 flex flex-wrap gap-1.5">
+                    <FilterChip active={!sourceFilter} onClick={() => setSourceFilter(null)}>
+                      All <span className="opacity-60">{articles.length}</span>
+                    </FilterChip>
+                    {sourceEntries.map(([name, count]) => (
+                      <FilterChip key={name} active={sourceFilter === name} onClick={() => setSourceFilter(sourceFilter === name ? null : name)}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${sourceColor(name).dot}`} />
+                        {shortSource(name)} <span className="opacity-60">{count}</span>
+                      </FilterChip>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <h2 id="cluster-drawer-title" className="text-xl font-bold text-slate-900">Topic details</h2>
+          )}
         </header>
 
-        <div className="p-6 flex-1 overflow-y-auto bg-slate-50">
-          {loading && (
-            <div className="flex flex-col gap-4 animate-pulse">
+        <div className={`flex-1 overflow-y-auto bg-slate-50 px-6 py-5 custom-scrollbar transition-opacity ${loading && cluster ? 'opacity-50' : ''}`}>
+          {loading && !cluster && (
+            <div className="flex animate-pulse flex-col gap-4">
               {[1, 2, 3].map(i => (
-                <div key={i} className="bg-white border border-slate-200 rounded-xl p-5">
-                  <div className="w-16 h-4 bg-slate-100 rounded mb-3"></div>
-                  <div className="w-full h-5 bg-slate-100 rounded mb-2"></div>
-                  <div className="w-3/4 h-5 bg-slate-100 rounded mb-4"></div>
-                  <div className="w-24 h-4 bg-slate-100 rounded"></div>
+                <div key={i} className="rounded-xl border border-slate-200 bg-white p-5">
+                  <div className="mb-3 h-4 w-16 rounded bg-slate-100" />
+                  <div className="mb-2 h-5 w-full rounded bg-slate-100" />
+                  <div className="h-5 w-3/4 rounded bg-slate-100" />
                 </div>
               ))}
             </div>
           )}
-          
+
           {error && (
-            <div className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-100 text-sm font-medium">
+            <div className="flex items-center justify-between rounded-xl border border-red-100 bg-red-50 p-4 text-sm font-medium text-red-700">
               {error}
+              <button onClick={() => setReloadKey(k => k + 1)} className="rounded-md bg-red-100 px-3 py-1 text-xs font-semibold hover:bg-red-200">
+                Retry
+              </button>
             </div>
           )}
-          
-          {data && !loading && (
-            <div className="flex flex-col gap-4">
-              {data.articles.map(article => (
-                <article key={article.id} className="bg-white border border-slate-200 rounded-xl p-5 hover:border-slate-300 hover:shadow-sm transition-all group">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider bg-slate-100 px-2 py-1 rounded">
-                      {article.source}
-                    </span>
-                  </div>
-                  <h3 className="font-semibold text-slate-900 mb-2 leading-snug group-hover:text-blue-700 transition-colors">
-                    {article.headline}
-                  </h3>
-                  <div className="flex justify-between items-end mt-4">
-                    <span className="text-xs text-slate-500">
-                      {new Date(article.publishedAt).toLocaleDateString()} &middot; {new Date(article.publishedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                    </span>
-                    <a 
-                      href={article.url} 
-                      target="_blank" 
+
+          {cluster && !error && (
+            <ol className="relative ml-2 border-l-2 border-slate-200">
+              {visibleArticles.map(article => {
+                const published = new Date(article.publishedAt);
+                const showDay = article.showDay;
+                const summary = stripHtml(article.summary);
+                const color = sourceColor(article.source);
+                return (
+                  <li key={article.id} className="relative pb-5 pl-6 last:pb-0">
+                    {showDay && (
+                      <div className="-ml-6 mb-2 pl-6 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                        {published.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
+                      </div>
+                    )}
+                    <span className={`absolute -left-[7px] mt-5 h-3 w-3 rounded-full border-2 border-white ${color.dot}`} />
+                    <a
+                      href={article.url}
+                      target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                      className="group block rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-slate-300 hover:shadow-sm"
                     >
-                      Read article <span aria-hidden="true">&rarr;</span>
+                      <div className="mb-2 flex items-center justify-between gap-2 text-[11px]">
+                        <span className={`rounded px-1.5 py-0.5 font-bold uppercase tracking-wide ${color.soft} ${color.text}`}>
+                          {shortSource(article.source)}
+                        </span>
+                        <span className="font-medium tabular-nums text-slate-500">{formatTime(published)}</span>
+                      </div>
+                      <h3 className="font-semibold leading-snug text-slate-900 group-hover:text-indigo-700">
+                        {article.headline}
+                      </h3>
+                      {summary && summary !== article.headline && (
+                        <p className="mt-1.5 line-clamp-3 text-sm leading-relaxed text-slate-600">{summary}</p>
+                      )}
+                      <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600">
+                        Read article <span aria-hidden="true">↗</span>
+                      </span>
                     </a>
-                  </div>
-                </article>
-              ))}
-            </div>
+                  </li>
+                );
+              })}
+            </ol>
           )}
         </div>
-      </div>
+
+        <footer className="hidden border-t border-slate-200 px-6 py-2 text-[11px] text-slate-400 md:block">
+          <Kbd>←</Kbd> <Kbd>→</Kbd> switch topics · <Kbd>Esc</Kbd> close
+        </footer>
+      </aside>
     </>
   );
+}
+
+function Stat({ label, value }) {
+  return (
+    <div className="rounded-lg bg-slate-50 px-3 py-2">
+      <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</dt>
+      <dd className="mt-0.5 text-sm font-bold text-slate-900">{value}</dd>
+    </div>
+  );
+}
+
+function FilterChip({ active, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+        active ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Kbd({ children }) {
+  return <kbd className="rounded border border-slate-200 bg-slate-50 px-1 font-sans text-[10px] text-slate-500">{children}</kbd>;
 }
