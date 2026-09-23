@@ -49,3 +49,6 @@ coverage/
 *.temp
 # Assessment brief (not part of the project)
 Xpo_Tech_Candidate_Assessment.docx.pdf
+
+# Personal interview preparation notes
+INTERVIEW_PREP.md
