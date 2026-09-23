@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# News Pulse Frontend
 
-## Getting Started
+## What it does
 
-First, run the development server:
+The frontend is a topic-clustered news timeline application. It:
+- displays the topic timeline using a custom Gantt-style visualization
+- loads cluster details and associated articles
+- filters visible clusters dynamically by news source
+- triggers data ingestion and polls job status until completion
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Requirements
+
+- Node.js 20+
+- running backend API server
+- backend URL configured in the environment
+
+## Environment
+
+Set the following environment variable (e.g. in `.env`):
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5001
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Replace this value with the deployed backend URL in your production environment.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## Run locally
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npm run dev
+```
 
-## Learn More
+## Production build
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run build
+npm start
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## API endpoints used
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The frontend consumes the following REST endpoints exposed by the Node.js backend:
+- `GET /timeline`: Fetches aggregated timeline blocks and their intensity.
+- `GET /clusters/:id`: Fetches specific articles and data for a given cluster.
+- `POST /ingest/trigger`: Initiates the Python ingestion pipeline.
+- `GET /ingest/status/:jobId`: Polls the status of the triggered pipeline.
 
-## Deploy on Vercel
+## Frontend architecture
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The application is built with Next.js and Tailwind CSS.
+- `app/page.js`: The main entry point that fetches the initial timeline data and orchestrates states.
+- `app/components/Timeline.js`: The custom chronological visualization of the timeline blocks.
+- `app/components/ClusterDrawer.js`: A slide-out panel that dynamically loads and displays a cluster's articles.
+- `app/components/SourceFilter.js`: A client-side filter control to select visible news sources.
+- `app/components/RefreshButton.js`: A component that handles triggering ingestion and safely polling the job status.
