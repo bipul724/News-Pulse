@@ -12,6 +12,7 @@ export default function ClusterList({ data, onSelectCluster, selectedClusterId, 
         return (
           <button
             key={cluster.id}
+            data-cluster-id={cluster.id}
             onClick={() => onSelectCluster(cluster.id)}
             className={`group flex flex-col rounded-xl border bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
               isSelected ? 'border-stone-900 ring-2 ring-stone-900/10' : 'border-stone-200 hover:border-stone-300'

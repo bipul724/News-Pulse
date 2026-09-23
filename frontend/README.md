@@ -104,4 +104,8 @@ The API only accepts requests from its `FRONTEND_URL` (CORS). Set that to this a
 
 - **Next.js version.** This project uses Next.js 16. Some APIs differ from older versions; check `node_modules/next/dist/docs/` before relying on older patterns (see `AGENTS.md`).
 - **Browser storage.** The view preference is the only thing stored in the browser (`localStorage`, wrapped in `try/catch`). Everything else comes from the API or the URL.
-- **Keyboard access.** Timeline bars are buttons, so they can be focused and show their tooltip on focus. The drawer is a labelled dialog that closes with `Esc`.
+- **Keyboard access.** Timeline bars and list cards are buttons. A bar shows its tooltip on keyboard focus (`:focus-visible`), not after mouse clicks. The drawer is a labelled dialog:
+  - opening it moves focus inside
+  - Tab and Shift+Tab stay within it
+  - `Esc` closes it
+  - on close, focus returns to the bar or card of the topic being shown, even after moving between topics with ←/→

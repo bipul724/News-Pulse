@@ -243,7 +243,17 @@ export default function Timeline({ data, onSelectCluster, selectedClusterId, hig
       <div
         ref={scrollRef}
         className="relative overflow-auto custom-scrollbar max-h-[68vh]"
-        onScroll={() => tooltip && setTooltip(null)}
+        onScroll={() => {
+          if (!tooltip) return;
+          // Keyboard focus can scroll the chart to reveal a bar: keep that bar's
+          // tooltip, moved to its new position. Mouse tooltips close on scroll.
+          const focused = document.activeElement;
+          if (focused?.dataset?.clusterId === tooltip.cluster.id && focused.matches(':focus-visible')) {
+            showTooltip(tooltip.cluster, focused.getBoundingClientRect());
+          } else {
+            setTooltip(null);
+          }
+        }}
       >
         {layout && (
           <div className="relative" style={{ width: contentWidth, height: lanesHeight + 36 }}>
@@ -317,7 +327,7 @@ export default function Timeline({ data, onSelectCluster, selectedClusterId, hig
                   onClick={() => onSelectCluster(cluster.id)}
                   onMouseEnter={e => showTooltip(cluster, e.currentTarget.getBoundingClientRect())}
                   onMouseLeave={() => setTooltip(null)}
-                  onFocus={e => showTooltip(cluster, e.currentTarget.getBoundingClientRect())}
+                  onFocus={e => e.currentTarget.matches(':focus-visible') && showTooltip(cluster, e.currentTarget.getBoundingClientRect())}
                   onBlur={() => setTooltip(null)}
                   aria-label={`${cluster.label}, ${cluster.articleCount} articles`}
                   className={`group absolute flex items-center text-left transition-opacity duration-200 focus:outline-none ${isDimmed ? 'opacity-20 hover:opacity-60' : ''}`}

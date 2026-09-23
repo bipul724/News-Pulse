@@ -11,6 +11,13 @@ export default function ClusterDrawer({ clusterId, onClose, onPrev, onNext, posi
   const [copied, setCopied] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const closeRef = useRef(null);
+  const drawerRef = useRef(null);
+  // The topic shown when the drawer closes (←/→ can change it while open).
+  const currentIdRef = useRef(clusterId);
+
+  useEffect(() => {
+    currentIdRef.current = clusterId;
+  }, [clusterId]);
 
   useEffect(() => {
     let active = true;
@@ -39,12 +46,24 @@ export default function ClusterDrawer({ clusterId, onClose, onPrev, onNext, posi
     return () => { active = false; };
   }, [clusterId, apiUrl, reloadKey]);
 
+  // Move focus into the drawer on open, and give it back on close: to the bar or
+  // card of the topic being shown, or else to whatever opened the drawer.
   useEffect(() => {
+    const opener = document.activeElement;
     closeRef.current?.focus();
+    return () => {
+      const topic = document.querySelector(`[data-cluster-id="${currentIdRef.current}"]`);
+      const target = topic ?? (opener instanceof HTMLElement && opener.isConnected ? opener : null);
+      target?.focus();
+    };
   }, []);
 
   useEffect(() => {
     const onKey = (e) => {
+      if (e.key === 'Tab') {
+        trapFocus(e, drawerRef.current);
+        return;
+      }
       if (e.target instanceof HTMLElement && e.target.closest('input, textarea')) return;
       if (e.key === 'Escape') onClose();
       else if (e.key === 'ArrowLeft' || e.key === 'k') onPrev?.();
@@ -84,6 +103,7 @@ export default function ClusterDrawer({ clusterId, onClose, onPrev, onNext, posi
       <div className="fixed inset-0 z-40 bg-stone-900/30 backdrop-blur-[2px] animate-fade-in" onClick={onClose} />
 
       <aside
+        ref={drawerRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="cluster-drawer-title"
@@ -249,6 +269,30 @@ export default function ClusterDrawer({ clusterId, onClose, onPrev, onNext, posi
       </aside>
     </>
   );
+}
+
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
+
+// Keeps Tab / Shift+Tab cycling inside the open dialog.
+function trapFocus(event, container) {
+  if (!container) return;
+  const focusable = [...container.querySelectorAll(FOCUSABLE)].filter(el => el.getClientRects().length > 0);
+  if (focusable.length === 0) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  const active = document.activeElement;
+
+  if (!container.contains(active)) {
+    // Focus escaped (e.g. the focused element was replaced while loading).
+    event.preventDefault();
+    (event.shiftKey ? last : first).focus();
+  } else if (event.shiftKey && active === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && active === last) {
+    event.preventDefault();
+    first.focus();
+  }
 }
 
 function Stat({ label, value }) {
