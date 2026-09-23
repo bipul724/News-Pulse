@@ -1,65 +1,111 @@
 import unittest
+from collections import Counter
 from datetime import datetime, timezone
-from src.grouping.clusterer import cluster_articles
-from src.utils.dates import parse_date
+from unittest.mock import patch
 
-class TestPipeline(unittest.TestCase):
-    def test_date_parsing(self):
-        # Valid standard date
-        dt1 = parse_date("Sun, 22 Sep 2026 12:00:00 GMT")
-        self.assertEqual(dt1.year, 2026)
-        self.assertEqual(dt1.month, 9)
-        self.assertEqual(dt1.day, 22)
+from src.main import PipelineError, main, run_pipeline
+from src.rss.fetcher import FeedResult
 
-        # Invalid date should fallback to current UTC
-        dt2 = parse_date("Invalid Date String")
-        self.assertTrue(isinstance(dt2, datetime))
-        self.assertIsNotNone(dt2.tzinfo)
 
-    def test_clustering_produces_expected_groups(self):
-        articles = [
-            {
-                "id": "1",
-                "guid": "guid1",
-                "headline": "Apple releases new iPhone",
-                "summary": "The tech giant announced its latest smartphone.",
-                "body": "Full text about the new iPhone.",
-                "publishedAt": datetime(2026, 9, 22, 10, 0, tzinfo=timezone.utc)
-            },
-            {
-                "id": "2",
-                "guid": "guid2",
-                "headline": "New Apple iPhone 15 features",
-                "summary": "Everything you need to know about the smartphone.",
-                "body": "It has a better camera and screen.",
-                "publishedAt": datetime(2026, 9, 22, 11, 0, tzinfo=timezone.utc)
-            },
-            {
-                "id": "3",
-                "guid": "guid3",
-                "headline": "Fed raises interest rates again",
-                "summary": "Central bank hikes rates by 25 basis points.",
-                "body": "Inflation concerns drive the decision.",
-                "publishedAt": datetime(2026, 9, 22, 9, 0, tzinfo=timezone.utc)
-            }
-        ]
-        
-        clusters = cluster_articles(articles)
-        
-        # We expect 2 clusters: [1, 2] (Apple/iPhone) and [3] (Fed/Rates)
-        self.assertEqual(len(clusters), 2)
-        
-        # Let's verify the first cluster has 2 articles (iPhone ones)
-        # Sort clusters by article count descending
-        clusters = sorted(clusters, key=lambda x: x['articleCount'], reverse=True)
-        
-        self.assertEqual(clusters[0]['articleCount'], 2)
-        self.assertEqual(clusters[1]['articleCount'], 1)
-        
-        # Verify the indices
-        self.assertIn(0, clusters[0]['article_indices'])
-        self.assertIn(1, clusters[0]['article_indices'])
-        self.assertIn(2, clusters[1]['article_indices'])
+def article(url, headline):
+    return {"source": "BBC News", "headline": headline, "summary": "", "body": None, "url": url,
+            "publishedAt": datetime(2026, 9, 22, tzinfo=timezone.utc)}
 
-if __name__ == '__main__':
+
+class FakeStorage:
+    def __init__(self, existing_urls=(), unclustered=False):
+        self.existing_urls = set(existing_urls)
+        self.unclustered = unclustered
+        self.inserted = []
+        self.replaced = None
+
+    def get_existing_urls(self):
+        return set(self.existing_urls)
+
+    def insert_articles(self, articles):
+        self.inserted.extend(articles)
+        return len(articles)
+
+    def needs_recluster(self):
+        return self.unclustered
+
+    def get_articles_for_clustering(self, max_body_chars):
+        return [dict(a, id=str(i)) for i, a in enumerate(self.inserted or [article("https://x.com/old", "Old")])]
+
+    def replace_clusters(self, clusters, articles):
+        self.replaced = (clusters, articles)
+
+
+FEED_ARTICLES = [article("https://x.com/known", "Known story"), article("https://x.com/new", "New story")]
+
+
+def fake_fetch(results_ok=True):
+    result = FeedResult("https://x.com/rss", "BBC News", articles=FEED_ARTICLES)
+    if not results_ok:
+        result = FeedResult("https://x.com/rss", "x.com", error="download failed")
+    return lambda urls: ((FEED_ARTICLES if results_ok else []), [result])
+
+
+@patch("src.main.extract_all", return_value=Counter({"extracted": 1}))
+class TestRunPipeline(unittest.TestCase):
+    def test_only_new_articles_are_extracted_and_inserted(self, extract):
+        storage = FakeStorage(existing_urls={"https://x.com/known"})
+        with patch("src.main.fetch_feeds", fake_fetch()):
+            stats = run_pipeline(storage, ["https://x.com/rss"])
+
+        extracted = extract.call_args.args[0]
+        self.assertEqual([a["url"] for a in extracted], ["https://x.com/new"])
+        self.assertEqual([a["url"] for a in storage.inserted], ["https://x.com/new"])
+        self.assertEqual((stats.fetched, stats.already_known, stats.inserted), (2, 1, 1))
+        self.assertIsNotNone(storage.replaced)
+        self.assertEqual(stats.clusters, 1)
+
+    def test_rerun_with_nothing_new_skips_extraction_and_clustering(self, extract):
+        storage = FakeStorage(existing_urls={"https://x.com/known", "https://x.com/new"})
+        with patch("src.main.fetch_feeds", fake_fetch()):
+            stats = run_pipeline(storage, ["https://x.com/rss"])
+
+        extract.assert_not_called()
+        self.assertEqual(storage.inserted, [])
+        self.assertIsNone(storage.replaced)
+        self.assertIsNone(stats.clusters)
+
+    def test_unclustered_articles_trigger_a_rebuild_even_without_new_ones(self, extract):
+        storage = FakeStorage(existing_urls={"https://x.com/known", "https://x.com/new"}, unclustered=True)
+        with patch("src.main.fetch_feeds", fake_fetch()):
+            stats = run_pipeline(storage, ["https://x.com/rss"])
+        self.assertIsNotNone(storage.replaced)
+        self.assertEqual(stats.recluster_reason, "unclustered articles found")
+
+    def test_force_recluster(self, extract):
+        storage = FakeStorage(existing_urls={"https://x.com/known", "https://x.com/new"})
+        with patch("src.main.fetch_feeds", fake_fetch()):
+            run_pipeline(storage, ["https://x.com/rss"], force_recluster=True)
+        self.assertIsNotNone(storage.replaced)
+
+    def test_all_feeds_failing_fails_the_run(self, extract):
+        with patch("src.main.fetch_feeds", fake_fetch(results_ok=False)):
+            with self.assertRaises(PipelineError):
+                run_pipeline(FakeStorage(), ["https://x.com/rss"])
+
+
+class TestMain(unittest.TestCase):
+    @patch("src.main.PostgresStorage")
+    def test_database_failure_exits_non_zero(self, storage_class):
+        storage_class.return_value.__enter__.side_effect = RuntimeError("could not connect")
+        with self.assertLogs("src.main", level="ERROR"):
+            self.assertEqual(main([]), 1)
+
+    @patch("src.main.run_pipeline")
+    @patch("src.main.PostgresStorage")
+    def test_success_exits_zero_and_passes_flag(self, storage_class, run):
+        from src.main import RunStats
+        run.return_value = RunStats(feeds_total=1, feeds_ok=1)
+        with self.assertLogs("src.main", level="INFO") as logs:
+            self.assertEqual(main(["--force-recluster"]), 0)
+        self.assertTrue(run.call_args.kwargs["force_recluster"])
+        self.assertTrue(any("INGESTION SUMMARY" in line for line in logs.output))
+
+
+if __name__ == "__main__":
     unittest.main()

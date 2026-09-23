@@ -83,7 +83,7 @@ queued ──► running ──► completed
 | --- | --- | --- |
 | `fetchedArticles` | `Fetched N total articles from RSS feeds` | Items read from all feeds, including already-known ones |
 | `newArticles` | `Inserted N new articles` (or `Found 0 new articles`) | Rows actually inserted into `Article` |
-| `clustersCreated` | `Formed N clusters` | Clusters after the rebuild (all clusters are recreated every run) |
+| `clustersCreated` | `Formed N clusters` | Clusters after the rebuild. `null` when the scraper skipped clustering because nothing changed |
 
 A metric stays `null` if the run ended before logging it.
 
