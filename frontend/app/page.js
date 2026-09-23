@@ -262,9 +262,9 @@ function Architecture() {
 
 function ReadingTheTimeline() {
   const rows = [
-    { tier: 'high', left: 6, width: 58, label: 'Summit talks', count: 13, inside: true },
-    { tier: 'medium', left: 30, width: 26, label: 'Trade dispute', count: 6 },
-    { tier: 'low', left: 70, width: 3, label: 'Breaking: earthquake', count: 1 },
+    { tier: 'high', left: 6, width: 58, label: 'Summit talks', count: 13, inside: true, height: 30 },
+    { tier: 'medium', left: 30, width: 26, label: 'Trade dispute', count: 6, height: 25 },
+    { tier: 'low', left: 70, width: 3, label: 'Breaking: earthquake', count: 1, height: 18 },
   ];
   const legend = [
     { tier: 'high', label: 'Heavy coverage' },
@@ -289,7 +289,7 @@ function ReadingTheTimeline() {
             {[
               ['Position', 'when the first article about the topic was published.'],
               ['Length', 'how long the story kept getting new coverage.'],
-              ['Colour', 'how many articles it gathered compared with the biggest story.'],
+              ['Thickness', 'how many articles it gathered: bigger stories get thicker, darker bars.'],
               ['Top rows', 'the biggest stories are always placed first.'],
             ].map(([term, desc]) => (
               <div key={term} className="flex gap-3">
@@ -310,7 +310,7 @@ function ReadingTheTimeline() {
                 const styles = TIER_STYLES[r.tier];
                 return (
                   <div key={r.label} className="relative h-8">
-                    <div className={`absolute flex h-8 items-center gap-2 rounded-md border shadow-sm ${r.inside ? 'px-3' : ''} ${styles.bar}`} style={{ left: `${r.left}%`, width: `${r.width}%` }}>
+                    <div className={`absolute top-1/2 flex -translate-y-1/2 items-center gap-2 rounded-md border shadow-sm ${r.inside ? 'px-3' : ''} ${styles.bar}`} style={{ left: `${r.left}%`, width: `${r.width}%`, height: r.height }}>
                       {r.inside && (
                         <>
                           <span className="truncate text-xs font-semibold">{r.label}</span>

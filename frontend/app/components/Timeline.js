@@ -11,22 +11,32 @@ const MIN_BAR_PX = 10;
 const MAX_LABEL_PX = 340;
 const MIN_LABEL_PX = 60;
 const MIN_TICK_SPACING_PX = 110;
+// Bar thickness encodes coverage: the biggest story gets MAX_BAR_H, a single
+// article about MIN_BAR_H. Square root keeps small counts (1 vs 2) visible.
+const MIN_BAR_H = 14;
+const MAX_BAR_H = 30;
+// Below this height a title can't sit inside the bar and goes beside it.
+const MIN_INSIDE_LABEL_H = 22;
+
+function barHeight(intensity = 0) {
+  return Math.round(MIN_BAR_H + (MAX_BAR_H - MIN_BAR_H) * Math.sqrt(Math.min(Math.max(intensity, 0), 1)));
+}
 const ZOOM_LEVELS = [1, 1.5, 2, 3, 4, 6];
 
 const HOUR = 3600000;
 const TICK_INTERVALS = [0.25, 0.5, 1, 2, 3, 6, 12, 24, 48, 168].map(h => h * HOUR);
 
 let measureCtx = null;
-function measureLabel(text) {
+let measureFamily = 'system-ui, sans-serif';
+// Titles are measured in the weight they are drawn in (bold titles are wider).
+function measureLabel(text, weight = 600) {
   if (typeof document !== 'undefined' && !measureCtx) {
     measureCtx = document.createElement('canvas').getContext('2d');
-    if (measureCtx) {
-      const family = getComputedStyle(document.body).fontFamily || 'system-ui, sans-serif';
-      measureCtx.font = `600 12px ${family}`;
-    }
+    measureFamily = getComputedStyle(document.body).fontFamily || measureFamily;
   }
-  const width = measureCtx ? measureCtx.measureText(text).width : text.length * 6.8;
-  return Math.min(Math.ceil(width), MAX_LABEL_PX);
+  if (!measureCtx) return Math.min(Math.ceil(text.length * 6.8), MAX_LABEL_PX);
+  measureCtx.font = `${weight} 12px ${measureFamily}`;
+  return Math.min(Math.ceil(measureCtx.measureText(text).width), MAX_LABEL_PX);
 }
 
 function buildTicks(minTime, maxTime, pxPerMs) {
@@ -94,8 +104,9 @@ export default function Timeline({ data, onSelectCluster, selectedClusterId, hig
       const x = toX(start);
       const barW = Math.max(MIN_BAR_PX, (end - start) * pxPerMs);
       const badgeW = cluster.articleCount > 1 ? 30 : 0;
-      const labelW = measureLabel(cluster.label);
-      const inside = labelW + badgeW + 22 <= barW;
+      const labelW = measureLabel(cluster.label, coverageTier(cluster.intensity) === 'high' ? 700 : 600);
+      const barH = barHeight(cluster.intensity);
+      const inside = barH >= MIN_INSIDE_LABEL_H && labelW + badgeW + 22 <= barW;
 
       let labelSide = 'inside';
       let labelMaxW = labelW;
@@ -117,7 +128,7 @@ export default function Timeline({ data, onSelectCluster, selectedClusterId, hig
         if (labelSide === 'right') occEnd = x + barW + labelMaxW + extra;
         else occStart = x - labelMaxW - extra;
       }
-      return { cluster, x, barW, labelSide, labelMaxW, occStart, occEnd };
+      return { cluster, x, barW, barH, labelSide, labelMaxW, occStart, occEnd };
     });
 
     // Place the biggest stories first so they settle into the top lanes.
@@ -286,8 +297,10 @@ export default function Timeline({ data, onSelectCluster, selectedClusterId, hig
             )}
 
             {/* Clusters */}
-            {layout.items.map(({ cluster, x, barW, labelSide, labelMaxW, lane }) => {
-              const styles = TIER_STYLES[coverageTier(cluster.intensity)];
+            {layout.items.map(({ cluster, x, barW, barH, labelSide, labelMaxW, lane }) => {
+              const tier = coverageTier(cluster.intensity);
+              const styles = TIER_STYLES[tier];
+              const weight = tier === 'high' ? 'font-bold' : 'font-semibold';
               const isSelected = cluster.id === selectedClusterId;
               const isDimmed = highlightIds && !highlightIds.has(cluster.id);
               const top = 36 + 12 + lane * (ROW_H + ROW_GAP);
@@ -317,12 +330,12 @@ export default function Timeline({ data, onSelectCluster, selectedClusterId, hig
                   }}
                 >
                   <span
-                    className={`relative flex h-[26px] items-center gap-2 overflow-hidden rounded-md border px-2.5 shadow-sm transition-shadow group-hover:shadow-md group-focus-visible:ring-2 group-focus-visible:ring-accent-500 group-focus-visible:ring-offset-1 ${styles.bar} ${isSelected ? 'ring-2 ring-stone-900 ring-offset-2' : ''}`}
-                    style={{ width: barW }}
+                    className={`relative flex items-center gap-2 overflow-hidden rounded-md border shadow-sm ${labelSide === 'inside' ? 'px-2.5' : ''} transition-shadow group-hover:shadow-md group-focus-visible:ring-2 group-focus-visible:ring-accent-500 group-focus-visible:ring-offset-1 ${styles.bar} ${isSelected ? 'ring-2 ring-stone-900 ring-offset-2' : ''}`}
+                    style={{ width: barW, height: barH }}
                   >
                     {labelSide === 'inside' && (
                       <>
-                        <span className="truncate text-xs font-semibold">{cluster.label}</span>
+                        <span className={`truncate text-xs ${weight}`}>{cluster.label}</span>
                         <span className="ml-auto">{badge}</span>
                       </>
                     )}
@@ -330,7 +343,7 @@ export default function Timeline({ data, onSelectCluster, selectedClusterId, hig
                   {labelSide !== 'inside' && (
                     <span className={`flex items-center gap-1.5 whitespace-nowrap ${labelSide === 'left' ? 'pr-2' : 'pl-2'}`}>
                       <span
-                        className={`truncate text-xs font-semibold group-hover:text-accent-700 ${isSelected ? 'text-stone-950 underline decoration-2 underline-offset-2' : 'text-stone-700'}`}
+                        className={`truncate text-xs ${weight} group-hover:text-accent-700 ${isSelected ? 'text-stone-950 underline decoration-2 underline-offset-2' : 'text-stone-700'}`}
                         style={{ maxWidth: labelMaxW + 2 }}
                       >
                         {cluster.label}
@@ -351,11 +364,11 @@ export default function Timeline({ data, onSelectCluster, selectedClusterId, hig
 
       <footer className="border-t border-stone-200 bg-paper px-5 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-stone-500">
         <span className="font-semibold text-stone-600">Coverage</span>
-        <LegendSwatch className="bg-accent-600 border-accent-700" label="Heavy" />
-        <LegendSwatch className="bg-accent-200 border-accent-300" label="Moderate" />
-        <LegendSwatch className="bg-stone-200 border-stone-300" label="Light" />
+        <LegendSwatch className="h-3.5 bg-accent-600 border-accent-700" label="Heavy" />
+        <LegendSwatch className="h-2.5 bg-accent-200 border-accent-300" label="Moderate" />
+        <LegendSwatch className="h-1.5 bg-stone-200 border-stone-300" label="Light" />
         <span className="hidden sm:inline text-stone-400">·</span>
-        <span>Bar length = how long the story stayed active</span>
+        <span>Length = how long the story stayed active · thickness and colour = how many articles</span>
         <span className="ml-auto hidden md:inline text-stone-400">Shift + scroll to pan · click a topic for articles</span>
       </footer>
     </div>
@@ -365,7 +378,7 @@ export default function Timeline({ data, onSelectCluster, selectedClusterId, hig
 function LegendSwatch({ className, label }) {
   return (
     <span className="flex items-center gap-1.5">
-      <span className={`w-4 h-2.5 rounded-sm border ${className}`} />
+      <span className={`w-4 rounded-sm border ${className}`} />
       {label}
     </span>
   );

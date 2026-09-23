@@ -15,7 +15,7 @@ The Next.js front end for News Pulse. It shows live news topics on an interactiv
 
 - **Timeline view.**
   - Each bar spans a topic's first to latest article, and the biggest topics sit on the top rows.
-  - Colour shows coverage: heavy, moderate or light, relative to the largest topic.
+  - Thickness and colour show coverage: bars grow from about 21px (one article) to 30px (the biggest story), and heavy topics get bold titles. Colour tiers are heavy, moderate or light, relative to the largest topic.
   - Titles that don't fit inside a bar are drawn beside it.
   - Zoom from 1× to 6×; hovering a bar shows its time range and sources.
 - **List view.** Topic cards sorted by *Biggest* or *Latest*.

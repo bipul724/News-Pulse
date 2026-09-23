@@ -41,7 +41,7 @@
 
 - **Collects news** from three public RSS feeds and, where the publisher allows it, the full article text.
 - **Groups related stories.** Articles about the same event, from any outlet, form one topic, using TF-IDF and cosine similarity.
-- **Shows topics over time.** Each topic is a bar on the timeline: where it starts is when the first article appeared, its length is how long the story kept getting coverage, and its colour is how heavily it was covered.
+- **Shows topics over time.** Each topic is a bar on the timeline: where it starts is when the first article appeared, its length is how long the story kept getting coverage, and its thickness and colour show how heavily it was covered.
 - **Lets you explore:**
   - search topics, filter by source and time range, and hide single-article topics
   - switch between a timeline view and a ranked list view
