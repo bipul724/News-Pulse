@@ -2,6 +2,8 @@
 
 **A topic-clustered news timeline.** News Pulse collects live articles from BBC News, NPR and The New York Times. It groups articles that cover the same event into topic clusters and shows each topic on an interactive timeline, from its first article to its latest.
 
+**Live app:** _add your Vercel URL after deploying_ · **API:** _add your Render URL_ · **Video walkthrough:** _add link_
+
 ![News Pulse landing page with live data](docs/images/landing.png)
 
 | Timeline | Topic details |
@@ -22,6 +24,8 @@
 - [Data model](#data-model)
 - [Key design decisions](#key-design-decisions)
 - [Testing](#testing)
+- [Deployment](#deployment)
+- [Assumptions](#assumptions)
 - [Known limitations](#known-limitations)
 - [Further documentation](#further-documentation)
 
@@ -86,7 +90,7 @@ A deeper walk-through is in [architecture.md](architecture.md).
 | --- | --- |
 | Ingestion and clustering | Python 3.11+, feedparser, requests, trafilatura, BeautifulSoup, scikit-learn (TF-IDF), SciPy (hierarchical clustering), psycopg 3 |
 | Database | PostgreSQL, hosted on Supabase |
-| API | Node.js 20+, Express 5, Prisma 7 (`@prisma/adapter-pg`), ES modules |
+| API | Node.js 22.18+ (24 used), Express 5, Prisma 7 (`@prisma/adapter-pg`), ES modules |
 | Web app | Next.js 16 (App Router), React 19, Tailwind CSS 4 |
 | Tests | Jest + Supertest (API), unittest (scraper) |
 
@@ -129,7 +133,7 @@ news-pulse/
 
 ### Prerequisites
 
-- **Node.js 20+** and npm
+- **Node.js 22.18+** and npm (24 recommended). The API imports Prisma's generated TypeScript client directly, which Node runs natively from 22.18
 - **Python 3.11+** (SciPy 1.17 requires it)
 - **A PostgreSQL database.** A free Supabase project works. Use the **direct** connection string (port 5432), because Prisma migrations need it.
 
@@ -212,7 +216,7 @@ Secrets live only in `.env` files, which git ignores. Every service ships a `.en
 | --- | --- | --- | --- |
 | backend | `DATABASE_URL` | — | PostgreSQL connection string |
 | backend | `PORT` | `5000` | API port (the frontend expects `5001` unless you change it) |
-| backend | `FRONTEND_URL` | `http://localhost:3000` | Allowed CORS origin |
+| backend | `FRONTEND_URL` | `http://localhost:3000` | Allowed CORS origin(s), comma-separated |
 | backend | `PYTHON_COMMAND` | `python3` | Python used to run the scraper; point it at the scraper's venv |
 | backend | `SCRAPER_PATH` | `../scraper` | Scraper directory, relative to `backend/` |
 | scraper | `DATABASE_URL` | — | Same database as the backend |
@@ -300,7 +304,7 @@ These are the choices with trade-offs. The component READMEs explain each one in
 ## Testing
 
 ```bash
-# API: 28 tests, Prisma mocked, no database needed
+# API: 31 tests, Prisma mocked, no database needed
 cd backend && npm test
 
 # Scraper: 94 tests, fully offline
@@ -315,6 +319,31 @@ cd frontend && npm run lint && npm run build
 
 - **API tests** cover every endpoint, the whole job lifecycle (queued → running → completed/failed), 404/409 cases, and a job being read after a restart.
 - **Scraper tests** cover URL and date normalization, malformed feeds and items, HTTP 403/404/timeouts, the clustering rules, labels, batched inserts, and transaction rollback.
+
+## Deployment
+
+| Component | Runs on | Why |
+| --- | --- | --- |
+| Web app | Vercel | Built for Next.js; free CDN hosting |
+| API + scraper | Render, one Docker image (`backend/Dockerfile`, `render.yaml`) | The API runs the Python scraper as a subprocess, so both share one container with Node 24 and Python 3.11 |
+| Database | Supabase PostgreSQL | Hosted Postgres; the app connects through the **Session pooler** (IPv4), because the direct host is IPv6-only and Render can't reach it |
+| Scheduled refresh (optional) | GitHub Actions cron | Triggers an ingestion every 6 hours so the live data stays current |
+
+Secrets are set in each platform's environment settings, never committed. Step-by-step instructions, the verification that was done, and troubleshooting: **[docs/deployment.md](docs/deployment.md)**.
+
+## Assumptions
+
+The brief leaves these open; this is how News Pulse decides them.
+
+- **"Topic" means one news event or story,** not a broad category. "Sri Lanka convicts 15 over Easter bombings" is a topic; "Asia" is not. The similarity threshold was tuned for that granularity.
+- **Sources are the three outlets' world-news feeds** (BBC World, NPR World, NYT World). They overlap on the same events, which is what makes cross-source topics possible.
+- **Paywalls are respected.** Where a site refuses automated access (NYT returns HTTP 403), the article is kept with its RSS headline and summary, and no full text is stored.
+- **A missing publication date becomes the fetch time.** The item is in the live feed at that moment, so this is a close approximation. The fallback is logged and counted, and the item is not dropped.
+- **A topic's time span runs from its earliest to its latest article.** A single-article topic is a point in time, drawn as a short bar.
+- **"Intensity" is relative.** It is a topic's article count divided by the largest topic's count, so the colours compare topics within the current data.
+- **Every stored article is shown.** There is no retention window yet, and single-article topics are visible (a filter can hide them).
+- **Topics are rebuilt when new articles arrive,** so topic IDs and shared `?topic=` links last until the next refresh.
+- **One ingestion runs at a time.** Pressing *Refresh Data* during a run joins that run instead of starting another.
 
 ## Known limitations
 
@@ -331,6 +360,7 @@ cd frontend && npm run lint && npm run build
 | --- | --- |
 | [architecture.md](architecture.md) | Components, data flow, transactions, failure handling |
 | [docs/api.md](docs/api.md) | Full REST API reference |
+| [docs/deployment.md](docs/deployment.md) | Vercel + Render + Supabase deployment, verification, troubleshooting |
 | [scraper/README.md](scraper/README.md) | Normalization, extraction, clustering algorithm and threshold experiment |
 | [backend/README.md](backend/README.md) | API internals, ingestion job lifecycle |
 | [frontend/README.md](frontend/README.md) | Pages, components, state, design system |

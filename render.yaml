@@ -1,0 +1,20 @@
+# Render Blueprint for the News Pulse API (https://render.com/docs/blueprint-spec).
+# New > Blueprint > pick this repository. Render asks for the two secret values below.
+services:
+  - type: web
+    name: news-pulse-api
+    runtime: docker
+    plan: free
+    # The image needs both backend/ and scraper/, so it is built from the repo root.
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # Supabase *Session pooler* URL (IPv4). The direct db.<ref>.supabase.co
+      # host is IPv6-only and Render cannot reach it.
+      - key: DATABASE_URL
+        sync: false
+      # The Vercel URL of the frontend; comma-separate several origins.
+      - key: FRONTEND_URL
+        sync: false

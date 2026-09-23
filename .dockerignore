@@ -1,0 +1,17 @@
+# Only backend/ and scraper/ go into the API image. Keep secrets, local
+# environments and build output out of the build context.
+.git
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
+**/venv
+**/.venv
+**/__pycache__
+**/*.pyc
+frontend
+docs
+*.md
+*.pdf
+backend/tests
+scraper/tests

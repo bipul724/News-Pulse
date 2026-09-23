@@ -1,0 +1,31 @@
+# Keeps the live timeline fresh: asks the deployed API to run an ingestion
+# every 6 hours. The scraper itself runs inside the API's container.
+#
+# Setup: GitHub repo > Settings > Secrets and variables > Actions > Variables >
+#        NEWS_PULSE_API_URL = https://<your-api>.onrender.com
+# Until that variable exists, the job skips itself.
+name: Scheduled ingestion
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    if: ${{ vars.NEWS_PULSE_API_URL != '' }}
+    steps:
+      - name: Trigger ingestion
+        env:
+          API_URL: ${{ vars.NEWS_PULSE_API_URL }}
+        run: |
+          # A sleeping free-tier instance can take ~1 minute to wake up.
+          for attempt in 1 2 3; do
+            status=$(curl -s -o response.json -w '%{http_code}' --max-time 120 -X POST "$API_URL/ingest/trigger" || echo 000)
+            echo "attempt $attempt: HTTP $status $(cat response.json 2>/dev/null)"
+            # 202 = started; 409 = a run is already in progress. Both are fine.
+            if [ "$status" = "202" ] || [ "$status" = "409" ]; then exit 0; fi
+            sleep 30
+          done
+          exit 1

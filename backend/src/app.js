@@ -13,8 +13,15 @@ import { errorHandler } from './middleware/errorHandler.js';
 const app = express();
 
 // Middleware
+// FRONTEND_URL may list several origins, comma-separated
+// (e.g. the production domain plus a Vercel preview URL).
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
+  .split(',')
+  .map(origin => origin.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: allowedOrigins,
   optionsSuccessStatus: 200,
 };
 

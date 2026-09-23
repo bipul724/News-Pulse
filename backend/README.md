@@ -16,7 +16,7 @@ It uses Node.js, Express, and Prisma as the core technologies.
 
 ## Setup Steps
 
-1. Make sure Node.js (v20+) is installed.
+1. Make sure Node.js 22.18+ is installed (24 recommended). The API imports Prisma's generated TypeScript client directly, which Node runs natively from 22.18.
 2. Inside the `/backend` directory, install dependencies:
    ```bash
    npm install
@@ -37,7 +37,7 @@ It uses Node.js, Express, and Prisma as the core technologies.
 
 - `PORT` (default: 5000) - The port the server runs on.
 - `DATABASE_URL` - The Supabase PostgreSQL connection string. Must use the direct connection URL for Prisma migrations.
-- `FRONTEND_URL` - Used to configure CORS allowing requests from the frontend.
+- `FRONTEND_URL` - Allowed CORS origin(s) for the frontend. Comma-separate several, e.g. a production and a preview URL.
 - `PYTHON_COMMAND` - The python executable (e.g., `python` or `python3`).
 - `SCRAPER_PATH` - The path to the Python scraper directory, relative to `backend`.
 

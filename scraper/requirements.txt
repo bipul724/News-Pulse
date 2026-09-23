@@ -1,5 +1,7 @@
 feedparser==6.0.11
 trafilatura==2.2.0
+# trafilatura's HTML cleaning; lxml no longer bundles it
+lxml_html_clean==0.4.5
 beautifulsoup4==4.12.3
 scikit-learn==1.4.1.post1
 scipy==1.17.1
