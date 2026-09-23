@@ -118,21 +118,25 @@ news-pulse/
 │   └── tests/                   94 offline unit tests + opt-in live checks
 │
 ├── backend/                     Node.js REST API
-│   ├── prisma/                  schema.prisma + migrations
+│   ├── prisma/                  schema.prisma + 4 migrations
 │   ├── src/
 │   │   ├── routes/ → controllers/ → services/ → Prisma
 │   │   ├── middleware/          404 and central error handler
 │   │   └── server.js            startup (recovers interrupted jobs)
-│   └── tests/                   Jest + Supertest, Prisma mocked
+│   ├── tests/                   36 Jest + Supertest tests, Prisma mocked
+│   └── Dockerfile               API + scraper image (Node 24 + Python 3.11)
 │
 ├── frontend/                    Next.js web app
 │   └── app/
 │       ├── page.js              landing page (live preview)
 │       ├── timeline/page.js     the timeline application
-│       ├── components/          Timeline, ClusterDrawer, ClusterList, …
-│       └── lib/format.js        formatting, source colours, coverage tiers
+│       ├── components/          Timeline, ClusterDrawer, ClusterList, Brand, …
+│       ├── lib/format.js        formatting, source colours, coverage tiers
+│       └── favicon.ico, icon.svg, apple-icon.png   site icons
 │
-├── docs/                        API reference and screenshots
+├── .github/workflows/           ci.yml (tests on every push), scheduled-ingest.yml
+├── docs/                        API reference, deployment guide, screenshots
+├── render.yaml                  Render deployment of the API
 ├── architecture.md              how the system fits together
 └── prd.md, design.md, rules.md, tasks.md, memory.md   original planning notes
 ```
@@ -305,9 +309,11 @@ These are the choices with trade-offs. The component READMEs explain each one in
 4. **Paywalls are respected.**
    - nytimes.com answers automated requests with HTTP 403. The scraper doesn't try to get around it: NYT articles keep their RSS headline and summary, and `body` is NULL.
    - Each run probes a site once; if the site refuses, its remaining articles are not requested.
-5. **Ingestion jobs are durable.**
+5. **Ingestion jobs are durable and can't get stuck.**
    - Job status lives in PostgreSQL rather than memory, so polling works across restarts.
-   - A job interrupted by a restart is marked `failed` on startup, so it can't block new runs forever.
+   - **One run at a time, enforced by the database:** a partial unique index allows only one `queued`/`running` job. Two simultaneous Refresh clicks give one run; the other click gets `409` and follows it.
+   - **A hung run is stopped** after 5 minutes (`SIGTERM`, then `SIGKILL`) and marked `failed`.
+   - **A run interrupted by a restart** is marked `failed` on startup, so it can't block new runs forever.
 6. **No extra infrastructure.** No queue, cache, WebSocket or embeddings service. One database, one subprocess and polling are enough for this scale, and they are easy to reason about.
 
 ## Testing
@@ -315,7 +321,7 @@ These are the choices with trade-offs. The component READMEs explain each one in
 Every push and pull request runs all of the checks below on GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)), plus a build of the API's Docker image. They are fully offline: no database or secrets needed.
 
 ```bash
-# API: 31 tests, Prisma mocked, no database needed
+# API: 36 tests, Prisma mocked, no database needed
 cd backend && npm test
 
 # Scraper: 94 tests, fully offline
@@ -328,7 +334,12 @@ RUN_INTEGRATION_TESTS=true python3 -m unittest tests.test_integration -v
 cd frontend && npm run lint && npm run build
 ```
 
-- **API tests** cover every endpoint, the whole job lifecycle (queued → running → completed/failed), 404/409 cases, and a job being read after a restart.
+- **API tests** cover:
+  - every endpoint, including 400/404 cases and unknown routes
+  - the whole job lifecycle (queued → running → completed/failed), with metrics and redacted errors
+  - the timeout stopping a hung run
+  - a trigger that loses the race to the database getting `409`
+  - a job being read after a restart, and CORS
 - **Scraper tests** cover URL and date normalization, malformed feeds and items, HTTP 403/404/timeouts, the clustering rules, labels, batched inserts, and transaction rollback.
 
 ## Deployment

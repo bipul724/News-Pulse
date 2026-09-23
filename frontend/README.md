@@ -48,9 +48,13 @@ app/
 │   ├── ClusterDrawer.js   topic side panel: articles, source filter, keyboard navigation
 │   ├── SourceFilter.js    source chips (All / toggle / Only)
 │   ├── RefreshButton.js   trigger + poll an ingestion job
-│   └── LandingLive.js     landing-page parts that fetch live data (with sample fallback)
-└── lib/
-    └── format.js          time formatting, source colours, coverage tiers
+│   ├── LandingLive.js     landing-page parts that fetch live data (with sample fallback)
+│   └── Brand.js           logo mark + "News Pulse" link, shared by both pages
+├── lib/
+│   └── format.js          time formatting, source colours, coverage tiers
+├── favicon.ico            browser-tab icon (16/32/48 px)
+├── icon.svg               scalable icon for modern browsers
+└── apple-icon.png         180×180 home-screen icon for iOS
 ```
 
 ## Data flow
@@ -77,7 +81,7 @@ To change the accent colour, edit the `--color-accent-*` values in `globals.css`
 
 ## Setup
 
-Requires Node.js 20+ and a running API (see the [root README](../README.md#getting-started)).
+Requires Node.js 20.9+ (Next.js 16's minimum; CI uses 24) and a running API (see the [root README](../README.md#getting-started)).
 
 ```bash
 npm install

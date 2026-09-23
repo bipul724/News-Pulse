@@ -209,6 +209,8 @@ Returns immediately. The scraper runs in the background.
 
 **409 Conflict:** a job is already queued or running. Poll that job instead.
 
+The database enforces this with a partial unique index (at most one `queued`/`running` job). Two triggers that arrive at the same moment therefore start one run; the other gets this `409` with the winning job's ID.
+
 ```json
 {
   "error": {
@@ -240,7 +242,7 @@ Returns immediately. The scraper runs in the background.
 | `stats.fetchedArticles` | Items read from all feeds, including already-known ones |
 | `stats.newArticles` | Rows actually inserted |
 | `stats.clustersCreated` | Topics after the rebuild. `null` when the run skipped clustering because nothing changed |
-| `error` | For failed jobs: exit code plus the last 500 characters of scraper output, with connection strings redacted |
+| `error` | For failed jobs: the reason (exit code, spawn error or timeout) plus the last 500 characters of scraper output, with connection strings redacted |
 
 Metrics are `null` until the scraper reports them, and stay `null` if a run ends before reporting.
 
@@ -248,6 +250,8 @@ Metrics are `null` until the scraper reports them, and stay `null` if a run ends
 | --- | --- |
 | 400 | `{"error":{"message":"Invalid job ID format","code":"INVALID_ID"}}` |
 | 404 | `{"error":{"message":"Job not found","code":"NOT_FOUND"}}` |
+
+**Timeouts.** A run still going after `INGEST_TIMEOUT_MINUTES` (default 5; normal runs take 30–60 s) is stopped (`SIGTERM`, then `SIGKILL` 10 s later) and marked `failed` with `Timed out after 5 min; the scraper was stopped.`
 
 **Restarts.** If the API restarts while a job is `queued` or `running`, that job can never finish, because its Python process belonged to the old server. On startup the API marks such jobs `failed` with the error `Interrupted: the server restarted before this job finished.`
 

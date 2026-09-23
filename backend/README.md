@@ -97,7 +97,7 @@ A metric stays `null` if the run ended before logging it.
 
 - **Development:** `npm run dev` (uses nodemon)
 - **Production:** `npm start`
-- **Testing:** `npm test`
+- **Testing:** `npm test` runs 36 Jest + Supertest tests with Prisma and the Python subprocess mocked, so no database is needed. They cover every endpoint, the job lifecycle, timeouts, the one-active-job race, restart recovery and CORS. CI runs them on every push.
 
 ## API Endpoints
 
@@ -159,4 +159,4 @@ Returns `400` for a malformed job ID and `404` for an unknown job.
 - For this assessment, authentication and authorization are skipped.
 - Only one ingestion job can run at a time; another trigger returns `409 Conflict` with the running job's ID. The database enforces this: the partial unique index `IngestionJob_one_active_key` allows at most one `queued`/`running` row. If two triggers arrive together and both pass the API's check, the index rejects the second insert, and that request gets the same `409`. Verified with 5 simultaneous triggers: one `202`, four `409`s pointing at the same job.
 - Ingestion metrics depend on the scraper's log wording. If those log lines change, the metrics become `null`; the job status is not affected.
-- A standard local python binary/environment is assumed for triggering the pipeline.
+- `PYTHON_COMMAND` must point at a Python that has the scraper's requirements installed: the scraper's `venv` locally. The Docker image sets it to its own virtual environment.
