@@ -398,7 +398,8 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 export const ModelName = {
   Article: 'Article',
-  Cluster: 'Cluster'
+  Cluster: 'Cluster',
+  IngestionJob: 'IngestionJob'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -414,7 +415,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "article" | "cluster"
+    modelProps: "article" | "cluster" | "ingestionJob"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -566,6 +567,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    IngestionJob: {
+      payload: Prisma.$IngestionJobPayload<ExtArgs>
+      fields: Prisma.IngestionJobFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.IngestionJobFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngestionJobPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.IngestionJobFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngestionJobPayload>
+        }
+        findFirst: {
+          args: Prisma.IngestionJobFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngestionJobPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.IngestionJobFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngestionJobPayload>
+        }
+        findMany: {
+          args: Prisma.IngestionJobFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngestionJobPayload>[]
+        }
+        create: {
+          args: Prisma.IngestionJobCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngestionJobPayload>
+        }
+        createMany: {
+          args: Prisma.IngestionJobCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.IngestionJobCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngestionJobPayload>[]
+        }
+        delete: {
+          args: Prisma.IngestionJobDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngestionJobPayload>
+        }
+        update: {
+          args: Prisma.IngestionJobUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngestionJobPayload>
+        }
+        deleteMany: {
+          args: Prisma.IngestionJobDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.IngestionJobUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.IngestionJobUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngestionJobPayload>[]
+        }
+        upsert: {
+          args: Prisma.IngestionJobUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngestionJobPayload>
+        }
+        aggregate: {
+          args: Prisma.IngestionJobAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateIngestionJob>
+        }
+        groupBy: {
+          args: Prisma.IngestionJobGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.IngestionJobGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.IngestionJobCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.IngestionJobCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -627,6 +702,21 @@ export const ClusterScalarFieldEnum = {
 } as const
 
 export type ClusterScalarFieldEnum = (typeof ClusterScalarFieldEnum)[keyof typeof ClusterScalarFieldEnum]
+
+
+export const IngestionJobScalarFieldEnum = {
+  id: 'id',
+  status: 'status',
+  startedAt: 'startedAt',
+  completedAt: 'completedAt',
+  error: 'error',
+  fetchedArticles: 'fetchedArticles',
+  newArticles: 'newArticles',
+  clustersCreated: 'clustersCreated',
+  createdAt: 'createdAt'
+} as const
+
+export type IngestionJobScalarFieldEnum = (typeof IngestionJobScalarFieldEnum)[keyof typeof IngestionJobScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -698,6 +788,20 @@ export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'In
  * Reference to a field of type 'Int[]'
  */
 export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Float'
+ */
+export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
+    
+
+
+/**
+ * Reference to a field of type 'Float[]'
+ */
+export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
     
 
 /**
@@ -853,6 +957,7 @@ export type PrismaClientOptions = PrismaClientOptionsWithAccelerateUrl | PrismaC
 export type GlobalOmitConfig = {
   article?: Prisma.ArticleOmit
   cluster?: Prisma.ClusterOmit
+  ingestionJob?: Prisma.IngestionJobOmit
 }
 
 /* Types for Logging */

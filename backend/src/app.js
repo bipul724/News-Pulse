@@ -4,6 +4,9 @@ import cors from 'cors';
 import clusterRoutes from './routes/clusterRoutes.js';
 import timelineRoutes from './routes/timelineRoutes.js';
 import ingestRoutes from './routes/ingestRoutes.js';
+import sourceRoutes from './routes/sourceRoutes.js';
+import statsRoutes from './routes/statsRoutes.js';
+import { getDatabaseHealth } from './controllers/healthController.js';
 import { notFound } from './middleware/notFound.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
@@ -26,9 +29,13 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.get('/health/db', getDatabaseHealth);
+
 app.use('/clusters', clusterRoutes);
 app.use('/timeline', timelineRoutes);
 app.use('/ingest', ingestRoutes);
+app.use('/sources', sourceRoutes);
+app.use('/stats', statsRoutes);
 
 // Error Handling
 app.use(notFound);

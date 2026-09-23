@@ -51,3 +51,8 @@ export type Article = Prisma.ArticleModel
  * 
  */
 export type Cluster = Prisma.ClusterModel
+/**
+ * Model IngestionJob
+ * 
+ */
+export type IngestionJob = Prisma.IngestionJobModel

@@ -25,20 +25,26 @@ const ICONS = {
 function Navbar() {
   return (
     <nav className="sticky top-0 z-50 border-b border-stone-200/80 bg-paper/90 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-8">
+      <div className="mx-auto flex h-16 max-w-7xl items-center px-4 sm:px-6 lg:px-8">
+        
+        {/* Left: Logo */}
+        <div className="flex flex-1 items-center justify-start">
           <Link href="/" className="flex items-center gap-2 font-display text-xl font-semibold tracking-tight text-stone-900">
             <PulseMark />
             News Pulse
           </Link>
-          <div className="hidden items-center gap-6 text-sm font-medium text-stone-600 md:flex">
-            <a href="#features" className="transition-colors hover:text-stone-900">Features</a>
-            <a href="#architecture" className="transition-colors hover:text-stone-900">How it works</a>
-            <a href="#reading" className="transition-colors hover:text-stone-900">Reading the timeline</a>
-            <a href="#sources" className="transition-colors hover:text-stone-900">Sources</a>
-          </div>
         </div>
-        <div className="flex items-center gap-3">
+
+        {/* Center: Navigation Links */}
+        <div className="hidden items-center justify-center gap-6 text-sm font-medium text-stone-600 md:flex">
+          <a href="#features" className="transition-colors hover:text-stone-900">Features</a>
+          <a href="#architecture" className="transition-colors hover:text-stone-900">How it works</a>
+          <a href="#reading" className="transition-colors hover:text-stone-900">Reading the timeline</a>
+          <a href="#sources" className="transition-colors hover:text-stone-900">Sources</a>
+        </div>
+
+        {/* Right: CTAs */}
+        <div className="flex flex-1 items-center justify-end gap-3">
           <StatusPill />
           <Link
             href="/timeline"

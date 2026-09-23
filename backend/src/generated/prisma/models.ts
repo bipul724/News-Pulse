@@ -10,4 +10,5 @@
  */
 export type * from './models/Article.ts'
 export type * from './models/Cluster.ts'
+export type * from './models/IngestionJob.ts'
 export type * from './commonInputTypes.ts'

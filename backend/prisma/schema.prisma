@@ -29,3 +29,19 @@ model Cluster {
   createdAt DateTime  @default(now())
   articles  Article[]
 }
+
+model IngestionJob {
+  id              String    @id @default(uuid())
+  status          String
+  startedAt       DateTime?
+  completedAt     DateTime?
+  error           String?
+  // Parsed from the scraper's own log lines; null when a run never reported them.
+  fetchedArticles Int?
+  newArticles     Int?
+  clustersCreated Int?
+  createdAt       DateTime  @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+}

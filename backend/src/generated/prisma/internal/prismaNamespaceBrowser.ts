@@ -52,7 +52,8 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   Article: 'Article',
-  Cluster: 'Cluster'
+  Cluster: 'Cluster',
+  IngestionJob: 'IngestionJob'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -93,6 +94,21 @@ export const ClusterScalarFieldEnum = {
 } as const
 
 export type ClusterScalarFieldEnum = (typeof ClusterScalarFieldEnum)[keyof typeof ClusterScalarFieldEnum]
+
+
+export const IngestionJobScalarFieldEnum = {
+  id: 'id',
+  status: 'status',
+  startedAt: 'startedAt',
+  completedAt: 'completedAt',
+  error: 'error',
+  fetchedArticles: 'fetchedArticles',
+  newArticles: 'newArticles',
+  clustersCreated: 'clustersCreated',
+  createdAt: 'createdAt'
+} as const
+
+export type IngestionJobScalarFieldEnum = (typeof IngestionJobScalarFieldEnum)[keyof typeof IngestionJobScalarFieldEnum]
 
 
 export const SortOrder = {
