@@ -18,7 +18,7 @@ export const createJob = async () => {
   const jobId = uuidv4();
   jobs.set(jobId, {
     jobId,
-    status: 'running',
+    status: 'queued',
     startedAt: new Date().toISOString(),
     completedAt: null,
     error: null,
@@ -31,17 +31,50 @@ export const getJobStatus = async (jobId) => {
 };
 
 export const startPythonIngestion = (jobId) => {
+  const job = jobs.get(jobId);
+  if (job) {
+    job.status = 'running';
+    jobs.set(jobId, job);
+  }
+
   const pythonCommand = process.env.PYTHON_COMMAND || 'python3';
   const scraperPath = process.env.SCRAPER_PATH || '../scraper';
-  const scriptPath = path.resolve(process.cwd(), scraperPath, 'src/main.py');
   const scraperWorkingDir = path.resolve(process.cwd(), scraperPath);
+  const args = ['-m', 'src.main'];
 
-  const pythonProcess = spawn(pythonCommand, [scriptPath], {
-    cwd: scraperWorkingDir,
-    env: { ...process.env },
-  });
+  console.log(`[Ingest ${jobId}] Starting:\n${pythonCommand} ${args.join(' ')}\n(cwd: ${scraperWorkingDir})`);
+
+  const spawnEnv = { ...process.env };
+
+  let pythonProcess;
+  try {
+    pythonProcess = spawn(pythonCommand, args, {
+      cwd: scraperWorkingDir,
+      env: spawnEnv,
+    });
+  } catch (spawnSyncError) {
+    // This catches synchronous errors during spawn initialization
+    console.error(`[Ingest ${jobId}] Sync spawn error:`, spawnSyncError);
+    if (job) {
+      job.status = 'failed';
+      job.completedAt = new Date().toISOString();
+      job.error = `Failed to start Python process: ${spawnSyncError.message}`;
+      jobs.set(jobId, job);
+    }
+    return;
+  }
 
   let outputLog = '';
+
+  pythonProcess.on('error', (err) => {
+    console.error(`[Ingest ${jobId}] Process error:`, err);
+    if (job) {
+      job.status = 'failed';
+      job.completedAt = new Date().toISOString();
+      job.error = `Failed to spawn process: ${err.message}`;
+      jobs.set(jobId, job);
+    }
+  });
 
   pythonProcess.stdout.on('data', (data) => {
     outputLog += data.toString();
@@ -54,16 +87,22 @@ export const startPythonIngestion = (jobId) => {
   });
 
   pythonProcess.on('close', async (code) => {
+    // The close event triggers even if an 'error' event fired. Let's make sure we don't overwrite a spawn error.
+    const currentJob = jobs.get(jobId);
+    if (!currentJob) return;
+
+    if (currentJob.status === 'failed' && currentJob.error && currentJob.error.includes('Failed to spawn process')) {
+      // Already handled by error listener
+      return;
+    }
+
     console.log(`[Ingest ${jobId}] Python process exited with code ${code}`);
     
-    const job = jobs.get(jobId);
-    if (job) {
-      job.status = code === 0 ? 'completed' : 'failed';
-      job.completedAt = new Date().toISOString();
-      if (code !== 0) {
-        job.error = `Process exited with code ${code}. Log excerpt: ${outputLog.slice(-500)}`;
-      }
-      jobs.set(jobId, job);
+    currentJob.status = code === 0 ? 'completed' : 'failed';
+    currentJob.completedAt = new Date().toISOString();
+    if (code !== 0) {
+      currentJob.error = `Process exited with code ${code}. Log excerpt: ${outputLog.slice(-500)}`;
     }
+    jobs.set(jobId, currentJob);
   });
 };
