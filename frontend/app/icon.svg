@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- News Pulse mark: the site's logo tile (stone-900) with the vermilion pulse line (accent-400). -->
+  <rect width="32" height="32" rx="7" fill="#1c1917"/>
+  <path d="M4 16h5.3l3.4-8 6.6 16 3.4-8H28" fill="none" stroke="#dc6d45" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
