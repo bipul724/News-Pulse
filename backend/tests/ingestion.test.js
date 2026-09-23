@@ -146,6 +146,33 @@ describe('POST /ingest/trigger', () => {
     }
   });
 
+  test('a trigger that loses the race at the database joins the winning run (409)', async () => {
+    const WINNER = '99999999-2222-4333-8444-555555555555';
+    // Both requests passed the "is one running?" check, then the unique index
+    // rejected this insert because the other request's job was created first.
+    mockPrisma.ingestionJob.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: WINNER, status: 'queued' });
+    mockPrisma.ingestionJob.create.mockRejectedValueOnce(Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }));
+
+    const res = await request(app).post('/ingest/trigger');
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toEqual({
+      message: 'An ingestion job is already running',
+      code: 'CONCURRENT_INGESTION_CONFLICT',
+      jobId: WINNER,
+    });
+    expect(spawn).not.toHaveBeenCalled();
+  });
+
+  test('other database errors while creating a job are still 500s', async () => {
+    mockPrisma.ingestionJob.create.mockRejectedValueOnce(new Error('connection lost'));
+    const res = await request(app).post('/ingest/trigger');
+    expect(res.status).toBe(500);
+    expect(spawn).not.toHaveBeenCalled();
+  });
+
   test('returns 409 with the active job id when a job is already running', async () => {
     mockPrisma.ingestionJob.findFirst.mockResolvedValueOnce({ id: JOB_ID, status: 'running' });
 

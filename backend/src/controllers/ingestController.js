@@ -1,21 +1,31 @@
 import * as ingestionService from '../services/ingestionService.js';
 
+const sendConflict = (res, jobId) =>
+  res.status(409).json({
+    error: {
+      message: 'An ingestion job is already running',
+      code: 'CONCURRENT_INGESTION_CONFLICT',
+      jobId,
+    },
+  });
+
 const UUID_PATTERN = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
 export const triggerIngestion = async (req, res, next) => {
   try {
     const existingJob = await ingestionService.getRunningJob();
-    if (existingJob) {
-      return res.status(409).json({
-        error: {
-          message: 'An ingestion job is already running',
-          code: 'CONCURRENT_INGESTION_CONFLICT',
-          jobId: existingJob.id
-        }
-      });
-    }
+    if (existingJob) return sendConflict(res, existingJob.id);
 
-    const jobId = await ingestionService.createJob();
+    let jobId;
+    try {
+      jobId = await ingestionService.createJob();
+    } catch (error) {
+      // Two triggers can both pass the check above; the database's unique
+      // index lets only one insert through. The other request joins that run.
+      if (!ingestionService.isActiveJobConflict(error)) throw error;
+      const winner = await ingestionService.getRunningJob();
+      return sendConflict(res, winner?.id ?? null);
+    }
     
     // Start Python ingestion in the background; the request does not wait for it.
     ingestionService.startPythonIngestion(jobId).catch((err) => {

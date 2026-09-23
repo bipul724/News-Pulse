@@ -32,6 +32,10 @@ export const getRunningJob = async () => {
   });
 };
 
+// Prisma's code for a unique-constraint violation. Here it means the partial
+// unique index "IngestionJob_one_active_key" rejected a second active job.
+export const isActiveJobConflict = (error) => error?.code === 'P2002';
+
 export const createJob = async () => {
   const job = await prisma.ingestionJob.create({
     data: { status: JOB_STATUS.QUEUED },

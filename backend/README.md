@@ -157,6 +157,6 @@ Returns `400` for a malformed job ID and `404` for an unknown job.
 ## Assumptions & Limitations
 
 - For this assessment, authentication and authorization are skipped.
-- Only one ingestion job can run at a time; another trigger returns `409 Conflict`. The check and the insert are two separate queries, so two triggers arriving within milliseconds of each other could both start a job. That is acceptable for a manual Refresh button, and would need a database-level lock if triggers became automated.
+- Only one ingestion job can run at a time; another trigger returns `409 Conflict` with the running job's ID. The database enforces this: the partial unique index `IngestionJob_one_active_key` allows at most one `queued`/`running` row. If two triggers arrive together and both pass the API's check, the index rejects the second insert, and that request gets the same `409`. Verified with 5 simultaneous triggers: one `202`, four `409`s pointing at the same job.
 - Ingestion metrics depend on the scraper's log wording. If those log lines change, the metrics become `null`; the job status is not affected.
 - A standard local python binary/environment is assumed for triggering the pipeline.

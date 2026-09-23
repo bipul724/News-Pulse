@@ -363,7 +363,6 @@ The brief leaves these open; this is how News Pulse decides them.
 - **NYT full text is unavailable** (HTTP 403). NYT topics are clustered on headline + summary.
 - **Every change re-clusters all stored articles.** Fine at hundreds of articles; at much larger scale, clustering should be limited to a recent window (for example the last 7 days).
 - **Small labelled set.** The similarity threshold was tuned on one day of news (103 articles) and should be re-checked as sources change.
-- **Rare double run.** The "is a job already running?" check and the job insert are two queries. Two triggers within milliseconds could both start a run. That's harmless for a manual button; automated triggers would need a database lock.
 - **Metrics depend on log wording.** The API reads job metrics from the scraper's log lines; if that wording changes, the metrics become `null` (the job status is unaffected).
 - **No authentication.** Anyone who can reach the API can trigger an ingestion. That's acceptable for a demo; put it behind auth or rate limiting before exposing it publicly.
 

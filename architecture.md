@@ -185,6 +185,5 @@ See [frontend/README.md](frontend/README.md) for components and the design syste
 | --- | --- | --- |
 | Clustering compares every stored article pair (O(n²)) | ~100 articles cluster in well under a second | Cluster only a recent window (e.g. 7 days) |
 | Topic IDs change on every rebuild | Links only need to last until the next refresh | Match new clusters to old ones by overlap to keep IDs stable |
-| One ingestion at a time, checked with two queries | Manual button; near-simultaneous clicks are unlikely | A database lock or unique partial index on active jobs |
 | Metrics parsed from log text | The phrases are documented and tested | Have the scraper print a final JSON summary line |
 | NYT bodies unavailable | Headline + summary still cluster well (they are in the labelled set) | Add sources that allow extraction |
