@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { HeroPreview, LiveSources, StatusPill } from './components/LandingLive';
+import { HeroPreview, LiveSources, LiveTopics, StatusPill } from './components/LandingLive';
 import { TIER_STYLES } from './lib/format';
 
 function Icon({ children, className = 'h-5 w-5' }) {
@@ -37,6 +37,7 @@ function Navbar() {
 
         {/* Center: Navigation Links */}
         <div className="hidden items-center justify-center gap-6 text-sm font-medium text-stone-600 md:flex">
+          <a href="#now" className="transition-colors hover:text-stone-900">In the news</a>
           <a href="#features" className="transition-colors hover:text-stone-900">Features</a>
           <a href="#architecture" className="transition-colors hover:text-stone-900">How it works</a>
           <a href="#reading" className="transition-colors hover:text-stone-900">Reading the timeline</a>
@@ -70,7 +71,7 @@ function PulseMark() {
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden px-4 pb-24 pt-20 text-center sm:pt-24">
+    <section className="relative overflow-hidden px-4 pb-20 pt-20 text-center sm:pt-24">
       <div className="mx-auto flex max-w-4xl flex-col items-center">
         <p className="mb-6 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-accent-600">
           <span className="h-1.5 w-1.5 rounded-full bg-accent-500" />
@@ -100,6 +101,27 @@ function Hero() {
         </div>
       </div>
       <HeroPreview />
+    </section>
+  );
+}
+
+function InTheNews() {
+  return (
+    <section id="now" className="scroll-mt-20 px-4 pb-24">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-8 flex flex-col justify-between gap-3 border-t border-stone-300 pt-8 sm:flex-row sm:items-end">
+          <div>
+            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-accent-600">In the news now</p>
+            <h2 className="font-display text-3xl font-medium tracking-tight text-stone-900 sm:text-4xl">
+              Stories more than one newsroom is covering
+            </h2>
+          </div>
+          <Link href="/timeline" className="shrink-0 text-sm font-semibold text-accent-600 hover:text-accent-800">
+            See every topic →
+          </Link>
+        </div>
+        <LiveTopics />
+      </div>
     </section>
   );
 }
@@ -139,12 +161,10 @@ function Features() {
             Instead of another feed of headlines, News Pulse shows what is happening, when it started, and how long it stayed in the news.
           </p>
         </div>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
           {features.map(f => (
-            <div key={f.title} className="rounded-xl border border-stone-200 bg-paper p-6 transition-colors hover:border-stone-300">
-              <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-lg border border-stone-300 bg-white text-accent-600">
-                <Icon>{ICONS[f.icon]}</Icon>
-              </div>
+            <div key={f.title} className="border-t-2 border-stone-900 pt-5">
+              <Icon className="mb-4 h-5 w-5 text-accent-600">{ICONS[f.icon]}</Icon>
               <h3 className="mb-2 font-semibold text-stone-900">{f.title}</h3>
               <p className="text-sm leading-relaxed text-stone-600">{f.desc}</p>
             </div>
@@ -188,18 +208,23 @@ function Architecture() {
               {i < stages.length - 1 && (
                 <span className="absolute -right-3 top-9 z-10 hidden text-stone-600 md:block" aria-hidden="true">→</span>
               )}
-              <div className="h-full rounded-xl border border-stone-800 bg-stone-900/60 p-5">
-                <div className="mb-4 flex items-center justify-between">
+              <div className="flex h-full gap-4 rounded-xl border border-stone-800 bg-stone-900/60 p-4 md:block md:p-5">
+                <div className="flex shrink-0 items-start justify-between md:mb-4 md:items-center">
                   <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-500/10 text-accent-300 ring-1 ring-accent-500/20">
                     <Icon>{ICONS[s.icon]}</Icon>
                   </span>
-                  <span className="font-mono text-[10px] text-stone-500">{s.folder}</span>
+                  <span className="hidden font-mono text-[10px] text-stone-500 md:inline">{s.folder}</span>
                 </div>
-                <h3 className="font-semibold">{s.title}</h3>
-                <p className="mt-1 text-xs font-medium text-accent-300/90">{s.tech}</p>
-                <ul className="mt-4 space-y-1.5 text-xs leading-relaxed text-stone-400">
-                  {s.points.map(p => <li key={p}>{p}</li>)}
-                </ul>
+                <div className="min-w-0">
+                  <h3 className="font-semibold">
+                    {s.title}
+                    <span className="ml-2 font-mono text-[10px] font-normal text-stone-500 md:hidden">{s.folder}</span>
+                  </h3>
+                  <p className="mt-1 text-xs font-medium text-accent-300/90">{s.tech}</p>
+                  <ul className="mt-2 space-y-1 text-xs leading-relaxed text-stone-400 md:mt-4 md:space-y-1.5">
+                    {s.points.map(p => <li key={p}>{p}</li>)}
+                  </ul>
+                </div>
               </div>
             </li>
           ))}
@@ -297,7 +322,7 @@ function ReadingTheTimeline() {
                 const styles = TIER_STYLES[r.tier];
                 return (
                   <div key={r.label} className="relative h-8">
-                    <div className={`absolute flex h-8 items-center gap-2 rounded-md border px-3 shadow-sm ${styles.bar}`} style={{ left: `${r.left}%`, width: `${r.width}%` }}>
+                    <div className={`absolute flex h-8 items-center gap-2 rounded-md border shadow-sm ${r.inside ? 'px-3' : ''} ${styles.bar}`} style={{ left: `${r.left}%`, width: `${r.width}%` }}>
                       {r.inside && (
                         <>
                           <span className="truncate text-xs font-semibold">{r.label}</span>
@@ -397,6 +422,7 @@ export default function LandingPage() {
       <Navbar />
       <main>
         <Hero />
+        <InTheNews />
         <Features />
         <Architecture />
         <ReadingTheTimeline />

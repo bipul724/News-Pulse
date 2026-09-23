@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { coverageTier, registerSources, shortSource, sourceColor, timeAgo, TIER_STYLES } from '../lib/format';
+import { registerSources, shortSource, sourceColor, timeAgo } from '../lib/format';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
 const HOUR = 3600000;
@@ -109,13 +109,12 @@ export function HeroPreview() {
 
   const stats = summarize(timeline);
   const top = [...timeline]
-    .sort((a, b) => b.articleCount - a.articleCount)
-    .slice(0, 6)
-    .sort((a, b) => new Date(a.start) - new Date(b.start));
+    .sort((a, b) => b.articleCount - a.articleCount || new Date(b.end) - new Date(a.end))
+    .slice(0, 6);
 
   return (
     <PreviewFrame status={status}>
-      <MiniTimeline clusters={top} />
+      <MiniTimeline clusters={top} live={status === 'live'} />
       <div className="grid grid-cols-2 divide-stone-100 border-t border-stone-100 sm:grid-cols-4 sm:divide-x">
         <Stat label="Topics" value={stats.topics} />
         <Stat label="Articles" value={stats.articles} />
@@ -155,7 +154,23 @@ function Stat({ label, value }) {
   );
 }
 
-function MiniTimeline({ clusters }) {
+function SourceDots({ sources }) {
+  return (
+    <span className="flex items-center gap-1">
+      {sources?.map(s => (
+        <span key={s.name} title={s.name} className={`h-2 w-2 rounded-full ${sourceColor(s.name).dot}`} />
+      ))}
+    </span>
+  );
+}
+
+// Links a topic to its drawer on the timeline page; sample topics have no real id.
+function TopicLink({ live, id, className, children }) {
+  if (!live) return <div className={className}>{children}</div>;
+  return <Link href={`/timeline?topic=${id}`} className={className}>{children}</Link>;
+}
+
+function MiniTimeline({ clusters, live }) {
   const starts = clusters.map(c => new Date(c.start).getTime());
   const ends = clusters.map(c => new Date(c.end).getTime());
   const rawMin = Math.min(...starts);
@@ -164,59 +179,107 @@ function MiniTimeline({ clusters }) {
   const min = rawMin - pad;
   const span = rawMax + pad - min;
   const pct = t => ((t - min) / span) * 100;
-  const ticks = [0.12, 0.37, 0.62, 0.87].map(f => min + span * f);
+  const ticks = [0.15, 0.5, 0.85].map(f => min + span * f);
   const multiDay = span > 20 * HOUR;
+  const tickLabel = t => new Date(t).toLocaleString([], multiDay ? { weekday: 'short', hour: 'numeric' } : { hour: 'numeric', minute: '2-digit' });
+
+  // Label column + time track: titles never overlap or get clipped by bars.
+  const grid = 'grid gap-x-6 gap-y-1.5 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] md:items-center';
 
   return (
-    <div className="relative bg-white">
-      <div className="relative h-8 border-b border-stone-100">
-        {ticks.map(t => (
-          <span key={t} className="absolute top-2 -translate-x-1/2 whitespace-nowrap text-[10px] font-medium text-stone-400" style={{ left: `${pct(t)}%` }}>
-            {new Date(t).toLocaleString([], multiDay ? { weekday: 'short', hour: 'numeric' } : { hour: 'numeric', minute: '2-digit' })}
-          </span>
-        ))}
-      </div>
-      <div className="relative px-4 py-4">
-        {ticks.map(t => (
-          <div key={t} className="absolute top-0 bottom-0 w-px bg-stone-100" style={{ left: `${pct(t)}%` }} />
-        ))}
-        <div className="relative space-y-2.5">
-          {clusters.map(c => {
-            const s = new Date(c.start).getTime();
-            const e = new Date(c.end).getTime();
-            const left = pct(s);
-            const width = Math.max(pct(e) - left, 2);
-            const styles = TIER_STYLES[coverageTier(c.intensity)];
-            const inside = width > 40;
-            const labelLeft = !inside && left + width > 58;
-            const label = (
-              <span className={`flex min-w-0 items-center gap-1.5 text-xs font-semibold ${inside ? '' : 'text-stone-700'}`}>
-                <span className="truncate">{c.label}</span>
-                <span className={`shrink-0 rounded px-1.5 text-[10px] font-bold tabular-nums ${inside ? styles.badge : 'bg-stone-100 text-stone-600'}`}>{c.articleCount}</span>
-              </span>
-            );
-            return (
-              <div key={c.id} className="relative h-7">
-                <div
-                  className={`absolute top-0 flex h-7 items-center overflow-hidden rounded-md border px-2.5 shadow-sm ${styles.bar}`}
-                  style={{ left: `${left}%`, width: `${width}%` }}
-                >
-                  {inside && label}
-                </div>
-                {!inside && (
-                  <div
-                    className="absolute top-0 flex h-7 max-w-[55%] items-center"
-                    style={labelLeft ? { right: `${100 - left}%`, paddingRight: 8 } : { left: `${left + width}%`, paddingLeft: 8 }}
-                  >
-                    {label}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+    <div>
+      <div className={`${grid} hidden border-b border-stone-100 px-5 py-2 md:grid`}>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Topic</span>
+        <div className="relative h-4">
+          {ticks.map(t => (
+            <span key={t} className="absolute -translate-x-1/2 whitespace-nowrap text-[10px] font-medium text-stone-400" style={{ left: `${pct(t)}%` }}>
+              {tickLabel(t)}
+            </span>
+          ))}
         </div>
       </div>
+      <ol className="divide-y divide-stone-100">
+        {clusters.map(c => {
+          const left = pct(new Date(c.start).getTime());
+          const width = Math.max(pct(new Date(c.end).getTime()) - left, 1.5);
+          return (
+            <li key={c.id}>
+              <TopicLink live={live} id={c.id} className={`${grid} group px-5 py-3 transition-colors ${live ? 'hover:bg-paper' : ''}`}>
+                <div className="min-w-0">
+                  <div className={`truncate text-sm font-semibold text-stone-900 ${live ? 'group-hover:text-accent-700' : ''}`} title={c.label}>
+                    {c.label}
+                  </div>
+                  <div className="mt-1 flex items-center gap-2 text-[11px] text-stone-500">
+                    <SourceDots sources={c.sources} />
+                    <span className="tabular-nums">{c.articleCount} articles</span>
+                    <span aria-hidden="true">·</span>
+                    <span>updated {timeAgo(c.end)}</span>
+                  </div>
+                </div>
+                <div className="relative mt-1 h-2 rounded-full bg-stone-100 md:mt-0" aria-hidden="true">
+                  {ticks.map(t => (
+                    <span key={t} className="absolute -top-1 -bottom-1 hidden w-px bg-stone-200 md:block" style={{ left: `${pct(t)}%` }} />
+                  ))}
+                  <span className="absolute inset-y-0 rounded-full bg-accent-500" style={{ left: `${left}%`, width: `${width}%` }} />
+                </div>
+              </TopicLink>
+            </li>
+          );
+        })}
+      </ol>
     </div>
+  );
+}
+
+export function LiveTopics() {
+  const { status, timeline } = useLiveTimeline();
+
+  if (status === 'loading') {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {[0, 1, 2].map(i => <div key={i} className="h-40 animate-pulse rounded-xl bg-white/70" />)}
+      </div>
+    );
+  }
+
+  const live = status === 'live';
+  const topics = [...timeline]
+    .filter(c => (c.sources?.length || 0) > 1)
+    .sort((a, b) => new Date(b.end) - new Date(a.end))
+    .slice(0, 6);
+
+  if (!topics.length) {
+    return <p className="text-center text-sm text-stone-500">No story has been covered by more than one outlet yet.</p>;
+  }
+
+  return (
+    <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {topics.map((c, i) => (
+        // Phones get the four most recent; wider screens fill a 3-column grid.
+        <li key={c.id} className={i >= 4 ? 'hidden sm:block' : undefined}>
+          <TopicLink
+            live={live}
+            id={c.id}
+            className={`group flex h-full flex-col rounded-xl border border-stone-200 bg-white p-5 transition-colors ${live ? 'hover:border-stone-400' : ''}`}
+          >
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              {c.sources.map(s => (
+                <span key={s.name} className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${sourceColor(s.name).soft} ${sourceColor(s.name).text}`}>
+                  {shortSource(s.name)}
+                </span>
+              ))}
+            </div>
+            <h3 className={`font-display text-lg font-semibold leading-snug text-stone-900 ${live ? 'group-hover:text-accent-700' : ''}`}>
+              {c.label}
+            </h3>
+            <p className="mt-auto pt-4 text-xs text-stone-500">
+              <span className="font-semibold tabular-nums text-stone-700">{c.articleCount} articles</span>
+              {' · '}updated {timeAgo(c.end)}
+            </p>
+          </TopicLink>
+        </li>
+      ))}
+    </ol>
   );
 }
 
