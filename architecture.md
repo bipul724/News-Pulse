@@ -1,389 +1,188 @@
 # News Pulse — Architecture
 
-## 1. Architecture Goal
+How the system is put together, how data moves through it, and why it is built this way. For setup, see the [README](README.md). For endpoint details, see [docs/api.md](docs/api.md).
 
-Keep the architecture simple enough to finish in 2 days while clearly separating the three required technologies:
+> This document describes the implemented system. The pre-implementation plan it replaces is in git history. [prd.md](prd.md) and [design.md](design.md) still hold the original requirements.
 
-- Python = ingestion + extraction + clustering
-- Node.js = REST API + ingestion job control
-- Next.js = UI + timeline visualization
+## 1. Goals and constraints
 
-The assessment specifically asks for clearly separated `/scraper`, `/backend`, and `/frontend` folders.
+- **Three technologies, three jobs.** Python collects and groups articles, Node serves them and controls ingestion, and Next.js visualizes. Each lives in its own folder (`/scraper`, `/backend`, `/frontend`).
+- **Re-runnable ingestion.** Running it twice must never duplicate articles, and a run with nothing new should be cheap.
+- **Understandable over clever.** One database, no queues, caches or ML services. Every mechanism should be explainable in a few sentences.
 
----
+## 2. Components
 
-## 2. High-Level Architecture
+```mermaid
+flowchart LR
+    subgraph External
+        RSS["RSS feeds<br/>BBC · NPR · NYT"]
+        PAGES["Article pages"]
+    end
+    subgraph scraper["/scraper (Python)"]
+        FETCH["rss/fetcher"] --> NORM["utils: URL · date · text"]
+        NORM --> EXTRACT["extraction<br/>(thread pool)"]
+        EXTRACT --> STORE["storage/postgres"]
+        STORE --> GROUP["grouping/clusterer<br/>TF-IDF + average linkage"]
+        GROUP --> STORE
+    end
+    subgraph backend["/backend (Node.js)"]
+        ROUTES["routes"] --> CTRL["controllers"] --> SVC["services"]
+        SVC --> PRISMA["Prisma client"]
+        SVC -. "child_process.spawn" .-> scraper
+    end
+    subgraph frontend["/frontend (Next.js)"]
+        LANDING["/ landing"]
+        TIMELINE["/timeline"]
+    end
+    DB[("PostgreSQL<br/>Supabase")]
 
-```text
-                    ┌─────────────────────┐
-                    │   Public RSS Feeds  │
-                    │ BBC / NPR / Source3 │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │   Python Scraper    │
-                    │                     │
-                    │ feedparser           │
-                    │ normalize            │
-                    │ extract article      │
-                    │ deduplicate          │
-                    │ TF-IDF clustering    │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │ PostgreSQL / Neon   │
-                    │                     │
-                    │ articles            │
-                    │ clusters            │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │ Node.js / Express   │
-                    │ REST API            │
-                    │                     │
-                    │ /clusters           │
-                    │ /clusters/:id       │
-                    │ /timeline           │
-                    │ /ingest/trigger     │
-                    │ /ingest/status/:id  │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │ Next.js / React     │
-                    │                     │
-                    │ Timeline             │
-                    │ Source filters      │
-                    │ Cluster details     │
-                    │ Refresh             │
-                    └─────────────────────┘
+    RSS --> FETCH
+    PAGES --> EXTRACT
+    STORE <-->|psycopg| DB
+    PRISMA <--> DB
+    LANDING -->|HTTP| ROUTES
+    TIMELINE -->|HTTP| ROUTES
 ```
 
----
+| Component | Responsibility | Talks to |
+| --- | --- | --- |
+| **Scraper** (`/scraper`) | Fetch feeds, normalize, deduplicate, extract full text, store articles, cluster, store clusters | RSS feeds, article pages, PostgreSQL (psycopg) |
+| **API** (`/backend`) | Serve topics, articles, sources and stats; start and track ingestion jobs | PostgreSQL (Prisma), the scraper (subprocess) |
+| **Web app** (`/frontend`) | Landing page, timeline, filters, topic drawer, refresh flow | The API only |
+| **Database** | Single source of truth | — |
 
-## 3. Repository Structure
+The web app never talks to the database, and the API never parses RSS. Each boundary is one interface: HTTP between the web app and the API, a subprocess plus the database between the API and the scraper.
 
-```text
-news-pulse/
-├── scraper/
-│   ├── src/
-│   │   ├── feeds.py
-│   │   ├── normalize.py
-│   │   ├── extractor.py
-│   │   ├── dedupe.py
-│   │   ├── cluster.py
-│   │   ├── database.py
-│   │   └── main.py
-│   ├── requirements.txt
-│   └── README.md
-│
-├── backend/
-│   ├── src/
-│   │   ├── server.js
-│   │   ├── routes/
-│   │   │   ├── clusters.js
-│   │   │   ├── timeline.js
-│   │   │   └── ingestion.js
-│   │   ├── services/
-│   │   │   ├── database.js
-│   │   │   └── ingestionJob.js
-│   │   └── utils/
-│   │       └── errors.js
-│   ├── package.json
-│   └── Dockerfile
-│
-├── frontend/
-│   ├── app/
-│   │   ├── page.tsx
-│   │   ├── globals.css
-│   │   └── components/
-│   │       ├── Timeline.tsx
-│   │       ├── ClusterCard.tsx
-│   │       ├── ClusterDrawer.tsx
-│   │       ├── SourceFilter.tsx
-│   │       └── RefreshButton.tsx
-│   ├── lib/
-│   │   └── api.ts
-│   └── package.json
-│
-├── README.md
-├── architecture.md
-├── prd.md
-├── rules.md
-├── design.md
-├── tasks.md
-└── memory.md
+## 3. Data model
+
+Prisma owns the schema (`backend/prisma/schema.prisma`) and its migrations. The scraper writes to the same tables with SQL.
+
+| Table | Written by | Key columns | Notes |
+| --- | --- | --- | --- |
+| `Article` | scraper | `url` UNIQUE, `publishedAt` (UTC), `clusterId` → `Cluster.id` | `body` is NULL when the publisher blocks extraction. Rows are never deleted |
+| `Cluster` | scraper | `id`, `label` | Rebuilt as a whole on each ingestion that changes data |
+| `IngestionJob` | API | `status`, `startedAt`, `completedAt`, `error`, metrics | Indexed on `status` and `createdAt` |
+
+- **Foreign key.** `Article.clusterId` has `ON DELETE SET NULL`, so deleting a cluster can never leave an article pointing at nothing.
+- **Timestamps.** Stored as `timestamp` columns holding UTC. The scraper pins its session to UTC before writing.
+
+## 4. Ingestion pipeline
+
+`python3 -m src.main`, run by the API or by hand, performs one run:
+
+```mermaid
+flowchart TD
+    A["Fetch 3 feeds<br/>(15 s timeout each)"] --> B["Normalize each item<br/>URL · date · summary"]
+    B --> C{"URL already stored?<br/>(one query, normalized)"}
+    C -- yes --> Z["skip: no page request"]
+    C -- no --> D["Extract page text<br/>probe each site, then parallel"]
+    D --> E["Insert batch<br/>ON CONFLICT (url) DO NOTHING"]
+    E --> F{"Anything changed?"}
+    Z --> F
+    F -- "new rows, or unclustered articles" --> G["Cluster all stored articles"]
+    G --> H["Replace clusters<br/>(one transaction)"]
+    F -- no --> I["Skip clustering"]
+    H --> S["Print summary"]
+    I --> S
 ```
 
----
+### 4.1 Normalization
 
-## 4. Database Design
+- **URLs.** Trimmed; scheme and host lowercased; default port, fragment and trailing slash removed; known tracking parameters (`utm_*`, BBC's `at_medium`/`at_campaign`, `fbclid`, …) dropped; remaining parameters sorted. Stored URLs are normalized the same way before comparing, so rows saved before normalization still match.
+- **Dates.** feedparser's pre-parsed UTC time is used first, then RFC 822 / ISO 8601 strings. Everything is converted to UTC. Dates more than 24h in the future or before 1990 are rejected. A missing date falls back to the fetch time, and the fallback is logged and counted.
+- **Items.** An item without a title or http(s) link is skipped and counted. A malformed item never stops its feed; a failed feed never stops the others.
 
-Use PostgreSQL.
+### 4.2 Extraction
 
-### `articles`
+- **Scope.** Only new articles are downloaded, through a bounded thread pool (`EXTRACTION_CONCURRENCY`, default 5).
+- **Probe wave.** The first request to each site goes out alone. If the site answers 401/403/429/451, the rest of its articles are skipped **for this run only**.
+- **Text.** `trafilatura` extracts the main text, falling back to paragraphs inside `<article>`. Anything under 200 characters counts as "no article text".
+- **Paywalls.** They are respected. NYT answers 403, so its articles keep the RSS headline and summary, with `body` NULL.
 
-```text
-id                 UUID / serial
-source             VARCHAR
-title              TEXT
-summary            TEXT
-body               TEXT nullable
-url                TEXT UNIQUE
-published_at       TIMESTAMP
-content_hash       TEXT UNIQUE
-cluster_id         FK
-created_at         TIMESTAMP
+### 4.3 Clustering
+
+1. **Documents.** Each document is headline + summary + the first 1,000 characters of the body, with site boilerplate removed, then lowercased and stripped of punctuation.
+2. **Similarity.** TF-IDF vectors (English stop words, sublinear term frequency), compared with cosine similarity.
+3. **Grouping.** Average-linkage agglomerative clustering. Groups merge while their *average* pairwise similarity is at least `SIMILARITY_THRESHOLD` (0.12).
+   - Chains don't form: if A~B and B~C but A and C are unrelated, C joins only if it is similar to the group as a whole.
+   - The result is independent of input order.
+4. **Labels.** Each topic is labelled with the member headline closest to the topic's centre, so labels are always real headlines. Duplicate labels get a distinguishing term appended.
+
+The threshold, the 1,000-character limit and the boilerplate rule were chosen by scoring hand-labelled real articles (precision 0.97, recall 1.00). The full experiment is in [scraper/README.md](scraper/README.md#choosing-the-threshold-012).
+
+### 4.4 Writing to the database
+
+| Step | Statements | Transaction |
+| --- | --- | --- |
+| Read known URLs | 1 `SELECT` | autocommit |
+| Insert new articles | 1 `INSERT … SELECT FROM unnest(…) ON CONFLICT (url) DO NOTHING RETURNING url` | 1 |
+| Replace clusters | advisory lock → unlink all → delete all → insert all → link all → verify count | 1 |
+
+- **Rollback.** If any step of the cluster replacement fails, the whole transaction rolls back and the previous clusters stay in place.
+- **Overlapping runs.** The advisory lock serializes cluster rebuilds even if two scraper runs ever overlap.
+
+## 5. Ingestion jobs (API ↔ scraper)
+
+```mermaid
+stateDiagram-v2
+    [*] --> queued: POST /ingest/trigger
+    queued --> running: status set, scraper spawned
+    running --> completed: exit code 0
+    running --> failed: non-zero exit or spawn error
+    queued --> failed: API restarted
+    running --> failed: API restarted
+    completed --> [*]
+    failed --> [*]
 ```
 
-### `clusters`
+1. **Trigger.** `POST /ingest/trigger` checks for a `queued` or `running` job and returns `409` with its ID if there is one. Otherwise it inserts a `queued` job and answers `202` immediately.
+2. **Run.** In the background the job becomes `running` (with `startedAt`), and `PYTHON_COMMAND -m src.main` is spawned with `cwd = SCRAPER_PATH`.
+3. **Metrics.** Node reads the scraper's stdout and stderr line by line. Four fixed log phrases give the metrics: `Fetched N total articles`, `Found N new articles`, `Inserted N new articles` and `Formed N clusters`.
+4. **Finish.** On exit the job becomes `completed` or `failed`, with `completedAt` and metrics. A failed job stores the last 500 characters of output, with connection strings redacted.
+5. **Startup recovery.** Any job still `queued` or `running` is marked `failed` when the API starts, because its process belonged to the previous server.
 
-```text
-id                 UUID / serial
-label              TEXT
-created_at         TIMESTAMP
-```
+Because jobs live in PostgreSQL, `GET /ingest/status/:jobId` keeps working across restarts, and `/stats` can report the last successful run.
 
-The important constraint is that the same article should not be inserted repeatedly.
+## 6. Web app
 
----
+| Route | What it shows |
+| --- | --- |
+| `/` | Landing page. Fetches `/timeline` once and shows the biggest stories, multi-outlet stories, live stats and source shares. Falls back to clearly labelled sample data if the API is offline |
+| `/timeline` | The application: stats, search, time-range and source filters, timeline or list view, topic drawer, *Refresh Data* |
 
-## 5. Python Pipeline
+Details:
+- **Timeline layout.** Computed in the browser. The time axis ticks on round hours and days. Each topic is packed into the first lane where its bar and label fit, biggest topics first. Titles too long for their bar are drawn beside it.
+- **State.** Filters and search live in React state. The open topic is kept in the URL (`?topic=<id>`) so it can be shared. The chosen view (timeline or list) is remembered in `localStorage`.
+- **Auto-refresh.** The page refetches `/timeline` every 5 minutes. *Refresh Data* starts an ingestion and polls its status every 2.5 seconds.
 
-```text
-start
-  ↓
-load RSS source configuration
-  ↓
-fetch each RSS feed
-  ↓
-normalize RSS fields
-  ↓
-check article URL/hash
-  ↓
-skip already-known article
-  ↓
-fetch article page
-  ↓
-extract body
-  ↓
-store article
-  ↓
-build clustering text
-  ↓
-TF-IDF
-  ↓
-cosine similarity
-  ↓
-assign cluster
-  ↓
-generate cluster label
-  ↓
-persist cluster relationship
-  ↓
-finish
-```
+See [frontend/README.md](frontend/README.md) for components and the design system.
 
-If one feed or article fails, log the error and continue processing other items.
+## 7. Failure handling
 
----
+| Failure | Effect |
+| --- | --- |
+| One feed down or malformed | Logged; other feeds continue |
+| Malformed item, missing title/link, bad date | Item skipped or date fallback, counted in the summary |
+| Article page 403 / 404 / timeout / bad HTML | Article kept with RSS text, `body` NULL |
+| Every feed fails | Run exits 1, job `failed` |
+| Database unreachable, or a transaction fails | Run exits 1, job `failed`; the cluster rebuild rolls back |
+| API restarts mid-run | Job marked `failed` on startup |
+| API unreachable from the web app | Error banner with *Try again*; the landing page shows sample data |
+| `GET /health/db` while the database is down | `503` |
 
-## 6. Clustering Architecture
+## 8. Running in production
 
-Recommended implementation:
+- **Python on the API host.** The API host must have Python and the scraper installed, because the API runs the scraper as a subprocess. Set `PYTHON_COMMAND` to that environment's Python and `SCRAPER_PATH` to the scraper directory.
+- **One database.** The API and the scraper use the same `DATABASE_URL`. Run `npx prisma migrate deploy` once per environment.
+- **Frontend settings.** Build the frontend with `NEXT_PUBLIC_API_URL` set to the public API URL, and set the API's `FRONTEND_URL` to the frontend's origin for CORS.
+- **Access control.** The API has no authentication. Anyone who can reach it can start ingestion runs, so restrict access or rate-limit `/ingest/trigger` before exposing it publicly.
 
-1. Combine `title + summary`.
-2. Normalize text.
-3. Remove English stop words.
-4. Create TF-IDF vectors.
-5. Calculate cosine similarity.
-6. Compare against a configurable threshold.
-7. Put sufficiently similar articles into the same cluster.
-8. Generate a label from representative/top terms.
+## 9. Scaling limits and next steps
 
-Keep the threshold in configuration, for example:
-
-```text
-CLUSTER_SIMILARITY_THRESHOLD=0.35
-```
-
-Do not claim that `0.35` is universally correct. Explain in README that it was selected experimentally using the collected articles.
-
----
-
-## 7. Node Ingestion Job
-
-`POST /ingest/trigger` should:
-
-1. generate a job ID;
-2. mark job as `queued/running`;
-3. start the Python process;
-4. immediately return the job ID;
-5. update job state when Python exits.
-
-Example:
-
-```json
-{
-  "jobId": "ingest-172345",
-  "status": "running"
-}
-```
-
-Then:
-
-```text
-GET /ingest/status/ingest-172345
-```
-
-returns:
-
-```json
-{
-  "jobId": "ingest-172345",
-  "status": "completed"
-}
-```
-
-Possible states:
-
-```text
-queued
-running
-completed
-failed
-```
-
-For a 2-day project, an in-memory job map is acceptable for a single backend instance. Document this as a limitation.
-
----
-
-## 8. API Contract
-
-### GET `/clusters`
-
-```json
-[
-  {
-    "id": "1",
-    "label": "Markets",
-    "articleCount": 5,
-    "start": "...",
-    "end": "..."
-  }
-]
-```
-
-### GET `/clusters/:id`
-
-```json
-{
-  "id": "1",
-  "label": "Markets",
-  "articles": [
-    {
-      "title": "...",
-      "source": "BBC",
-      "publishedAt": "...",
-      "url": "..."
-    }
-  ]
-}
-```
-
-Sort articles chronologically.
-
-### GET `/timeline`
-
-Return chart-ready objects:
-
-```json
-[
-  {
-    "id": "1",
-    "label": "Markets",
-    "start": "...",
-    "end": "...",
-    "articleCount": 5,
-    "intensity": 5
-  }
-]
-```
-
-### POST `/ingest/trigger`
-
-Starts ingestion and returns a job ID.
-
-### GET `/ingest/status/:jobId`
-
-Returns current ingestion status.
-
----
-
-## 9. Deployment Architecture
-
-Recommended:
-
-```text
-Vercel
-  └── Next.js frontend
-
-Render
-  └── Node.js backend
-       └── Python runtime/process
-            └── Neon PostgreSQL
-
-Neon
-  └── persistent database
-```
-
-Because the Node API must trigger the Python pipeline, the simplest deployment is to package Node + Python in the same backend container.
-
-The exact hosting mechanism is an implementation choice; the assessment only requires the full system to be live.
-
----
-
-## 10. Environment Variables
-
-Frontend:
-
-```text
-NEXT_PUBLIC_API_URL
-```
-
-Backend:
-
-```text
-DATABASE_URL
-PYTHON_PATH
-PORT
-```
-
-Scraper:
-
-```text
-DATABASE_URL
-CLUSTER_SIMILARITY_THRESHOLD
-```
-
-Never commit secrets.
-
----
-
-## 11. Important Design Decision
-
-Do not introduce:
-
-- Redis,
-- Kafka,
-- Kubernetes,
-- a separate queue service,
-- microservices,
-- embeddings/vector databases,
-
-unless absolutely necessary.
-
-The assessment is evaluating engineering judgment. A small reliable architecture is preferable to infrastructure that consumes the two-day deadline.
+| Limit today | Why it is fine now | What to do later |
+| --- | --- | --- |
+| Clustering compares every stored article pair (O(n²)) | ~100 articles cluster in well under a second | Cluster only a recent window (e.g. 7 days) |
+| Topic IDs change on every rebuild | Links only need to last until the next refresh | Match new clusters to old ones by overlap to keep IDs stable |
+| One ingestion at a time, checked with two queries | Manual button; near-simultaneous clicks are unlikely | A database lock or unique partial index on active jobs |
+| Metrics parsed from log text | The phrases are documented and tested | Have the scraper print a final JSON summary line |
+| NYT bodies unavailable | Headline + summary still cluster well (they are in the labelled set) | Add sources that allow extraction |

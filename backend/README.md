@@ -2,6 +2,8 @@
 
 The Node.js backend for the News Pulse application.
 
+For request/response examples of every endpoint, see [docs/api.md](../docs/api.md). For how the backend fits with the scraper and web app, see [architecture.md](../architecture.md).
+
 ## Architecture
 
 This backend serves as an orchestration layer and API server. It does the following:
