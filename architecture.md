@@ -128,7 +128,7 @@ stateDiagram-v2
     [*] --> queued: POST /ingest/trigger
     queued --> running: status set, scraper spawned
     running --> completed: exit code 0
-    running --> failed: non-zero exit or spawn error
+    running --> failed: non-zero exit, spawn error or timeout
     queued --> failed: API restarted
     running --> failed: API restarted
     completed --> [*]
@@ -139,6 +139,7 @@ stateDiagram-v2
 2. **Run.** In the background the job becomes `running` (with `startedAt`), and `PYTHON_COMMAND -m src.main` is spawned with `cwd = SCRAPER_PATH`.
 3. **Metrics.** Node reads the scraper's stdout and stderr line by line. Four fixed log phrases give the metrics: `Fetched N total articles`, `Found N new articles`, `Inserted N new articles` and `Formed N clusters`.
 4. **Finish.** On exit the job becomes `completed` or `failed`, with `completedAt` and metrics. A failed job stores the last 500 characters of output, with connection strings redacted.
+5. **Timeout.** A run still going after `INGEST_TIMEOUT_MINUTES` (default 5) gets `SIGTERM`, then `SIGKILL` after 10 s. The job is marked `failed` once the process has exited, so a hung run can never block triggers indefinitely.
 5. **Startup recovery.** Any job still `queued` or `running` is marked `failed` when the API starts, because its process belonged to the previous server.
 
 Because jobs live in PostgreSQL, `GET /ingest/status/:jobId` keeps working across restarts, and `/stats` can report the last successful run.
@@ -167,6 +168,7 @@ See [frontend/README.md](frontend/README.md) for components and the design syste
 | Every feed fails | Run exits 1, job `failed` |
 | Database unreachable, or a transaction fails | Run exits 1, job `failed`; the cluster rebuild rolls back |
 | API restarts mid-run | Job marked `failed` on startup |
+| Scraper hangs | Stopped after `INGEST_TIMEOUT_MINUTES` (SIGTERM, then SIGKILL); job marked `failed` |
 | API unreachable from the web app | Error banner with *Try again*; the landing page shows sample data |
 | `GET /health/db` while the database is down | `503` |
 

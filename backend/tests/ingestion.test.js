@@ -16,6 +16,8 @@ function fakeProcess() {
   const proc = new EventEmitter();
   proc.stdout = new EventEmitter();
   proc.stderr = new EventEmitter();
+  // Like a real process: SIGTERM makes it exit, reporting the signal.
+  proc.kill = jest.fn((signal) => { if (signal === 'SIGTERM') proc.emit('close', null, 'SIGTERM'); });
   return proc;
 }
 
@@ -109,6 +111,39 @@ describe('POST /ingest/trigger', () => {
 
     expect(updatesWith('failed')).toHaveLength(1);
     expect(updatesWith('failed')[0][0].data.error).toBe('Failed to spawn process: spawn python3 ENOENT');
+  });
+
+  test('stops a hung scraper after the timeout and records the job as failed', async () => {
+    process.env.INGEST_TIMEOUT_MINUTES = '0.0005';  // 30 ms instead of 5 minutes
+    try {
+      await triggerAndStart();
+      proc.stderr.emit('data', Buffer.from('INFO - Fetched 95 total articles from RSS feeds.\n'));
+      // The fake process never exits on its own, like a hung run.
+      await waitFor(() => updatesWith('failed').length === 1);
+
+      expect(proc.kill).toHaveBeenCalledWith('SIGTERM');
+      const { data } = updatesWith('failed')[0][0];
+      expect(data.error).toMatch(/^Timed out after 0\.0005 min; the scraper was stopped\./);
+      expect(data.fetchedArticles).toBe(95);   // metrics gathered before the timeout are kept
+      expect(updatesWith('completed')).toHaveLength(0);
+    } finally {
+      delete process.env.INGEST_TIMEOUT_MINUTES;
+    }
+  });
+
+  test('a run that finishes in time is never killed', async () => {
+    process.env.INGEST_TIMEOUT_MINUTES = '0.001';  // 60 ms
+    try {
+      await triggerAndStart();
+      proc.emit('close', 0, null);
+      await waitFor(() => updatesWith('completed').length === 1);
+      await new Promise(resolve => setTimeout(resolve, 100));  // well past the timeout
+
+      expect(proc.kill).not.toHaveBeenCalled();
+      expect(updatesWith('failed')).toHaveLength(0);
+    } finally {
+      delete process.env.INGEST_TIMEOUT_MINUTES;
+    }
   });
 
   test('returns 409 with the active job id when a job is already running', async () => {

@@ -40,6 +40,7 @@ It uses Node.js, Express, and Prisma as the core technologies.
 - `FRONTEND_URL` - Allowed CORS origin(s) for the frontend. Comma-separate several, e.g. a production and a preview URL.
 - `PYTHON_COMMAND` - The python executable (e.g., `python` or `python3`).
 - `SCRAPER_PATH` - The path to the Python scraper directory, relative to `backend`.
+- `INGEST_TIMEOUT_MINUTES` (default: 5) - How long an ingestion run may take before it is stopped and marked failed.
 
 ## Database Setup
 
@@ -78,6 +79,7 @@ queued ──► running ──► completed
 3. In the background the job is set to `running` (with `startedAt`), and the scraper starts with `child_process.spawn`.
 4. When Python exits, the job is set to `completed` (exit code 0) or `failed` (any other exit code or a spawn error), with `completedAt`.
    A failed job stores the last 500 characters of the scraper output in `error`. Connection strings in that output are redacted first.
+5. **Timeout.** A run still going after `INGEST_TIMEOUT_MINUTES` (default 5; normal runs take 30–60 s) is sent `SIGTERM`, then `SIGKILL` 10 seconds later if it hasn't exited. Once it has exited, the job is marked `failed` with `Timed out after N min; the scraper was stopped.` Waiting for the exit means a job never reads `failed` while Python could still write; Postgres rolls back any transaction the killed process left open.
 
 **Metrics.** The scraper already logs its counts. Node reads them from the process output and stores them on the job:
 

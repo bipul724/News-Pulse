@@ -15,6 +15,16 @@ const ACTIVE_STATUSES = [JOB_STATUS.QUEUED, JOB_STATUS.RUNNING];
 const LOG_TAIL_CHARS = 4000;
 const ERROR_EXCERPT_CHARS = 500;
 
+// A normal run takes 30-60 s. Anything far beyond that is treated as hung.
+const DEFAULT_TIMEOUT_MINUTES = 5;
+// After SIGTERM, how long Python gets to exit cleanly before SIGKILL.
+const KILL_GRACE_MS = 10_000;
+
+const ingestionTimeoutMinutes = () => {
+  const minutes = Number(process.env.INGEST_TIMEOUT_MINUTES);
+  return Number.isFinite(minutes) && minutes > 0 ? minutes : DEFAULT_TIMEOUT_MINUTES;
+};
+
 export const getRunningJob = async () => {
   return prisma.ingestionJob.findFirst({
     where: { status: { in: ACTIVE_STATUSES } },
@@ -90,8 +100,13 @@ export const startPythonIngestion = async (jobId) => {
   console.log(`[Ingest ${jobId}] Starting:\n${pythonCommand} ${args.join(' ')}\n(cwd: ${scraperWorkingDir})`);
 
   let finished = false;
+  let timedOut = false;
+  let timeoutTimer = null;
+  let killTimer = null;
   const finish = (data) => {
     // 'error' and 'close' can both fire for one process; only the first result counts.
+    clearTimeout(timeoutTimer);
+    clearTimeout(killTimer);
     if (finished) return Promise.resolve();
     finished = true;
     return updateJob(jobId, { completedAt: new Date(), ...data });
@@ -111,6 +126,22 @@ export const startPythonIngestion = async (jobId) => {
     });
     return;
   }
+
+  // A hung run would otherwise stay "running" forever and block every trigger
+  // with 409. Stop it, then record the failure once the process has exited,
+  // so the job never reads "failed" while Python could still write.
+  const timeoutMinutes = ingestionTimeoutMinutes();
+  timeoutTimer = setTimeout(() => {
+    timedOut = true;
+    console.error(`[Ingest ${jobId}] Timed out after ${timeoutMinutes} min; sending SIGTERM`);
+    pythonProcess.kill('SIGTERM');
+    killTimer = setTimeout(() => {
+      console.error(`[Ingest ${jobId}] Still running ${KILL_GRACE_MS / 1000} s after SIGTERM; sending SIGKILL`);
+      pythonProcess.kill('SIGKILL');
+    }, KILL_GRACE_MS);
+    killTimer.unref?.();
+  }, timeoutMinutes * 60_000);
+  timeoutTimer.unref?.();
 
   const metrics = { fetchedArticles: null, newArticles: null, clustersCreated: null };
   let logTail = '';
@@ -140,11 +171,17 @@ export const startPythonIngestion = async (jobId) => {
     finish({ status: JOB_STATUS.FAILED, error: `Failed to spawn process: ${err.message}` });
   });
 
-  pythonProcess.on('close', (code) => {
+  pythonProcess.on('close', (code, signal) => {
     if (pendingLine) parseMetricsLine(pendingLine, metrics);
-    console.log(`[Ingest ${jobId}] Python process exited with code ${code}`);
+    console.log(`[Ingest ${jobId}] Python process exited with code ${code}${signal ? ` (signal ${signal})` : ''}`);
 
-    if (code === 0) {
+    if (timedOut) {
+      finish({
+        status: JOB_STATUS.FAILED,
+        ...metrics,
+        error: `Timed out after ${timeoutMinutes} min; the scraper was stopped. Log excerpt: ${redactSecrets(logTail.slice(-ERROR_EXCERPT_CHARS))}`,
+      });
+    } else if (code === 0) {
       finish({ status: JOB_STATUS.COMPLETED, ...metrics });
     } else {
       finish({

@@ -227,6 +227,7 @@ Secrets live only in `.env` files, which git ignores. Every service ships a `.en
 | backend | `FRONTEND_URL` | `http://localhost:3000` | Allowed CORS origin(s), comma-separated |
 | backend | `PYTHON_COMMAND` | `python3` | Python used to run the scraper; point it at the scraper's venv |
 | backend | `SCRAPER_PATH` | `../scraper` | Scraper directory, relative to `backend/` |
+| backend | `INGEST_TIMEOUT_MINUTES` | `5` | A run taking longer is stopped and its job marked failed |
 | scraper | `DATABASE_URL` | — | Same database as the backend |
 | scraper | `RSS_FEEDS` | BBC, NPR, NYT world feeds | Comma-separated feed URLs |
 | scraper | `SIMILARITY_THRESHOLD` | `0.12` | How similar articles must be to share a topic |
