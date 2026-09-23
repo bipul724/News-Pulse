@@ -1,4 +1,7 @@
+import { Newsreader } from 'next/font/google';
 import './globals.css';
+
+const newsreader = Newsreader({ subsets: ['latin'], variable: '--font-newsreader', display: 'swap' });
 
 export const metadata = {
   title: 'News Pulse — Topic-clustered news timeline',
@@ -7,7 +10,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" className={newsreader.variable}>
       <body>{children}</body>
     </html>
   );

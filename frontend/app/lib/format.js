@@ -1,10 +1,11 @@
 const SOURCE_PALETTE = [
-  { dot: 'bg-sky-500', text: 'text-sky-700', soft: 'bg-sky-50', hex: '#0ea5e9' },
-  { dot: 'bg-rose-500', text: 'text-rose-700', soft: 'bg-rose-50', hex: '#f43f5e' },
-  { dot: 'bg-amber-500', text: 'text-amber-700', soft: 'bg-amber-50', hex: '#f59e0b' },
-  { dot: 'bg-emerald-500', text: 'text-emerald-700', soft: 'bg-emerald-50', hex: '#10b981' },
-  { dot: 'bg-violet-500', text: 'text-violet-700', soft: 'bg-violet-50', hex: '#8b5cf6' },
-  { dot: 'bg-teal-500', text: 'text-teal-700', soft: 'bg-teal-50', hex: '#14b8a6' },
+  // Muted ink tones, kept away from the vermilion accent so it stays meaningful.
+  { dot: 'bg-[#3d6a8a]', text: 'text-[#2f5570]', soft: 'bg-[#e8eff4]', hex: '#3d6a8a' },
+  { dot: 'bg-[#b7862b]', text: 'text-[#87621c]', soft: 'bg-[#f6eedd]', hex: '#b7862b' },
+  { dot: 'bg-[#5b7f5a]', text: 'text-[#43613f]', soft: 'bg-[#e9f0e6]', hex: '#5b7f5a' },
+  { dot: 'bg-[#7d4e6e]', text: 'text-[#603b54]', soft: 'bg-[#f2e8ef]', hex: '#7d4e6e' },
+  { dot: 'bg-[#3f7a78]', text: 'text-[#2e5d5b]', soft: 'bg-[#e4f0ef]', hex: '#3f7a78' },
+  { dot: 'bg-[#57534e]', text: 'text-[#44403c]', soft: 'bg-[#efedea]', hex: '#57534e' },
 ];
 
 const assigned = new Map();
@@ -59,3 +60,16 @@ export function timeAgo(ts, now = Date.now()) {
 export function stripHtml(html) {
   return (html || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 }
+
+// Coverage tiers shared by the timeline and the landing page preview.
+export function coverageTier(intensity = 0) {
+  if (intensity > 0.6) return 'high';
+  if (intensity > 0.3) return 'medium';
+  return 'low';
+}
+
+export const TIER_STYLES = {
+  high: { bar: 'bg-accent-600 border-accent-700 text-white', badge: 'bg-white/20 text-white' },
+  medium: { bar: 'bg-accent-200 border-accent-300 text-accent-950', badge: 'bg-accent-950/10 text-accent-900' },
+  low: { bar: 'bg-stone-200 border-stone-300 text-stone-800', badge: 'bg-stone-900/10 text-stone-700' },
+};

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { formatDateTime, formatDuration, shortSource, sourceColor } from '../lib/format';
+import { coverageTier, formatDateTime, formatDuration, shortSource, sourceColor, TIER_STYLES } from '../lib/format';
 
 const PAD_X = 28;
 const ROW_H = 34;
@@ -27,18 +27,6 @@ function measureLabel(text) {
   const width = measureCtx ? measureCtx.measureText(text).width : text.length * 6.8;
   return Math.min(Math.ceil(width), MAX_LABEL_PX);
 }
-
-function tier(intensity = 0) {
-  if (intensity > 0.6) return 'high';
-  if (intensity > 0.3) return 'medium';
-  return 'low';
-}
-
-const TIER_STYLES = {
-  high: { bar: 'bg-indigo-600 border-indigo-700 text-white', badge: 'bg-white/20 text-white' },
-  medium: { bar: 'bg-indigo-200 border-indigo-300 text-indigo-950', badge: 'bg-indigo-950/10 text-indigo-900' },
-  low: { bar: 'bg-slate-200 border-slate-300 text-slate-800', badge: 'bg-slate-900/10 text-slate-700' },
-};
 
 function buildTicks(minTime, maxTime, pxPerMs) {
   const interval = TICK_INTERVALS.find(i => i * pxPerMs >= MIN_TICK_SPACING_PX) || TICK_INTERVALS.at(-1);
@@ -191,34 +179,34 @@ export default function Timeline({ data, onSelectCluster, selectedClusterId, hig
   const firstDayLabelVisible = layout && !layout.ticks.some(t => t.isMidnight && t.x < 140);
 
   return (
-    <div className="flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-      <header className="px-5 py-3.5 border-b border-slate-100 flex flex-wrap gap-3 justify-between items-center">
+    <div className="flex flex-col bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+      <header className="px-5 py-3.5 border-b border-stone-100 flex flex-wrap gap-3 justify-between items-center">
         <div>
-          <h2 className="text-base font-semibold text-slate-900 tracking-tight">Timeline</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Each bar spans a topic&apos;s first to latest article. Biggest stories sit on top.</p>
+          <h2 className="text-base font-semibold text-stone-900 tracking-tight">Timeline</h2>
+          <p className="text-xs text-stone-500 mt-0.5">Each bar spans a topic&apos;s first to latest article. Biggest stories sit on top.</p>
         </div>
-        <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-0.5" role="group" aria-label="Zoom">
+        <div className="flex items-center gap-1 rounded-lg border border-stone-200 bg-paper p-0.5" role="group" aria-label="Zoom">
           <button
             onClick={() => changeZoom(zoomIdx - 1)}
             disabled={zoomIdx === 0}
             aria-label="Zoom out"
-            className="w-7 h-7 rounded-md text-slate-600 hover:bg-white hover:shadow-sm disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:shadow-none font-semibold"
+            className="w-7 h-7 rounded-md text-stone-600 hover:bg-white hover:shadow-sm disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:shadow-none font-semibold"
           >
             −
           </button>
-          <span className="w-12 text-center text-xs font-semibold tabular-nums text-slate-600">{zoom}×</span>
+          <span className="w-12 text-center text-xs font-semibold tabular-nums text-stone-600">{zoom}×</span>
           <button
             onClick={() => changeZoom(zoomIdx + 1)}
             disabled={zoomIdx === ZOOM_LEVELS.length - 1}
             aria-label="Zoom in"
-            className="w-7 h-7 rounded-md text-slate-600 hover:bg-white hover:shadow-sm disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:shadow-none font-semibold"
+            className="w-7 h-7 rounded-md text-stone-600 hover:bg-white hover:shadow-sm disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:shadow-none font-semibold"
           >
             +
           </button>
           <button
             onClick={() => changeZoom(0)}
             disabled={zoomIdx === 0}
-            className="px-2 h-7 rounded-md text-xs font-semibold text-slate-600 hover:bg-white hover:shadow-sm disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:shadow-none"
+            className="px-2 h-7 rounded-md text-xs font-semibold text-stone-600 hover:bg-white hover:shadow-sm disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:shadow-none"
           >
             Fit
           </button>
@@ -236,7 +224,7 @@ export default function Timeline({ data, onSelectCluster, selectedClusterId, hig
             {layout.days.map((day, i) => (
               <div
                 key={day.key}
-                className={`absolute top-0 bottom-0 ${i % 2 ? 'bg-slate-50' : 'bg-white'}`}
+                className={`absolute top-0 bottom-0 ${i % 2 ? 'bg-paper' : 'bg-white'}`}
                 style={{ left: day.x0, width: Math.max(0, day.x1 - day.x0) }}
               />
             ))}
@@ -245,20 +233,20 @@ export default function Timeline({ data, onSelectCluster, selectedClusterId, hig
             {layout.ticks.map(tick => (
               <div
                 key={tick.t}
-                className={`absolute top-9 bottom-0 w-px ${tick.isMidnight ? 'bg-slate-300' : 'bg-slate-200/70'}`}
+                className={`absolute top-9 bottom-0 w-px ${tick.isMidnight ? 'bg-stone-300' : 'bg-stone-200/70'}`}
                 style={{ left: tick.x }}
               />
             ))}
 
             {/* Axis */}
-            <div className="sticky top-0 z-20 h-9 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
+            <div className="sticky top-0 z-20 h-9 border-b border-stone-200 bg-white/95 backdrop-blur-sm">
               {firstDayLabelVisible && layout.days[0] && (
-                <span className="absolute left-3 top-2.5 text-[11px] font-bold text-slate-800">{layout.days[0].label}</span>
+                <span className="absolute left-3 top-2.5 text-[11px] font-bold text-stone-800">{layout.days[0].label}</span>
               )}
               {layout.ticks.map(tick => (
                 <span
                   key={tick.t}
-                  className={`absolute top-2.5 -translate-x-1/2 whitespace-nowrap text-[11px] ${tick.isMidnight ? 'font-bold text-slate-800' : 'font-medium text-slate-500'}`}
+                  className={`absolute top-2.5 -translate-x-1/2 whitespace-nowrap text-[11px] ${tick.isMidnight ? 'font-bold text-stone-800' : 'font-medium text-stone-500'}`}
                   style={{ left: tick.x }}
                 >
                   {formatTick(tick)}
@@ -269,19 +257,19 @@ export default function Timeline({ data, onSelectCluster, selectedClusterId, hig
             {/* Now marker */}
             {nowX !== null && (
               <div className="absolute top-9 bottom-0 z-10 pointer-events-none" style={{ left: nowX }}>
-                <div className="w-px h-full bg-rose-400" />
-                <span className="absolute top-1 left-1 text-[10px] font-bold uppercase tracking-wider text-rose-500">Now</span>
+                <div className="w-px h-full bg-accent-500" />
+                <span className="absolute top-1 left-1 text-[10px] font-bold uppercase tracking-wider text-accent-600">Now</span>
               </div>
             )}
 
             {/* Clusters */}
             {layout.items.map(({ cluster, x, barW, labelSide, lane }) => {
-              const styles = TIER_STYLES[tier(cluster.intensity)];
+              const styles = TIER_STYLES[coverageTier(cluster.intensity)];
               const isSelected = cluster.id === selectedClusterId;
               const isDimmed = highlightIds && !highlightIds.has(cluster.id);
               const top = 36 + 12 + lane * (ROW_H + ROW_GAP);
               const badge = cluster.articleCount > 1 && (
-                <span className={`shrink-0 rounded px-1.5 py-px text-[10px] font-bold tabular-nums ${labelSide === 'inside' ? styles.badge : 'bg-slate-100 text-slate-600'}`}>
+                <span className={`shrink-0 rounded px-1.5 py-px text-[10px] font-bold tabular-nums ${labelSide === 'inside' ? styles.badge : 'bg-stone-100 text-stone-600'}`}>
                   {cluster.articleCount}
                 </span>
               );
@@ -306,7 +294,7 @@ export default function Timeline({ data, onSelectCluster, selectedClusterId, hig
                   }}
                 >
                   <span
-                    className={`relative flex h-[26px] items-center gap-2 overflow-hidden rounded-md border px-2.5 shadow-sm transition-shadow group-hover:shadow-md group-focus-visible:ring-2 group-focus-visible:ring-indigo-500 group-focus-visible:ring-offset-1 ${styles.bar} ${isSelected ? 'ring-2 ring-slate-900 ring-offset-2' : ''}`}
+                    className={`relative flex h-[26px] items-center gap-2 overflow-hidden rounded-md border px-2.5 shadow-sm transition-shadow group-hover:shadow-md group-focus-visible:ring-2 group-focus-visible:ring-accent-500 group-focus-visible:ring-offset-1 ${styles.bar} ${isSelected ? 'ring-2 ring-stone-900 ring-offset-2' : ''}`}
                     style={{ width: barW }}
                   >
                     {labelSide === 'inside' && (
@@ -319,7 +307,7 @@ export default function Timeline({ data, onSelectCluster, selectedClusterId, hig
                   {labelSide !== 'inside' && (
                     <span className={`flex items-center gap-1.5 whitespace-nowrap ${labelSide === 'left' ? 'pr-2' : 'pl-2'}`}>
                       <span
-                        className={`truncate text-xs font-semibold group-hover:text-indigo-700 ${isSelected ? 'text-slate-950 underline decoration-2 underline-offset-2' : 'text-slate-700'}`}
+                        className={`truncate text-xs font-semibold group-hover:text-accent-700 ${isSelected ? 'text-stone-950 underline decoration-2 underline-offset-2' : 'text-stone-700'}`}
                         style={{ maxWidth: MAX_LABEL_PX }}
                       >
                         {cluster.label}
@@ -338,14 +326,14 @@ export default function Timeline({ data, onSelectCluster, selectedClusterId, hig
         <TimelineTooltip {...tooltip} />
       )}
 
-      <footer className="border-t border-slate-200 bg-slate-50 px-5 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-slate-500">
-        <span className="font-semibold text-slate-600">Coverage</span>
-        <LegendSwatch className="bg-indigo-600 border-indigo-700" label="Heavy" />
-        <LegendSwatch className="bg-indigo-200 border-indigo-300" label="Moderate" />
-        <LegendSwatch className="bg-slate-200 border-slate-300" label="Light" />
-        <span className="hidden sm:inline text-slate-400">·</span>
+      <footer className="border-t border-stone-200 bg-paper px-5 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-stone-500">
+        <span className="font-semibold text-stone-600">Coverage</span>
+        <LegendSwatch className="bg-accent-600 border-accent-700" label="Heavy" />
+        <LegendSwatch className="bg-accent-200 border-accent-300" label="Moderate" />
+        <LegendSwatch className="bg-stone-200 border-stone-300" label="Light" />
+        <span className="hidden sm:inline text-stone-400">·</span>
         <span>Bar length = how long the story stayed active</span>
-        <span className="ml-auto hidden md:inline text-slate-400">Shift + scroll to pan · click a topic for articles</span>
+        <span className="ml-auto hidden md:inline text-stone-400">Shift + scroll to pan · click a topic for articles</span>
       </footer>
     </div>
   );
@@ -371,7 +359,7 @@ function TimelineTooltip({ cluster, x, top, bottom }) {
   return (
     <div
       role="tooltip"
-      className="fixed z-50 w-72 rounded-xl border border-slate-700 bg-slate-900 p-4 text-xs text-slate-100 shadow-2xl pointer-events-none"
+      className="fixed z-50 w-72 rounded-xl border border-stone-700 bg-stone-900 p-4 text-xs text-stone-100 shadow-2xl pointer-events-none"
       style={{
         left,
         top: placeBelow ? bottom + 8 : undefined,
@@ -379,18 +367,18 @@ function TimelineTooltip({ cluster, x, top, bottom }) {
       }}
     >
       <div className="mb-2 text-sm font-semibold leading-snug">{cluster.label}</div>
-      <div className="mb-3 space-y-0.5 border-b border-slate-700/80 pb-3 text-slate-400">
+      <div className="mb-3 space-y-0.5 border-b border-stone-700/80 pb-3 text-stone-400">
         <div>{formatDateTime(start)}{end !== start && <> → {formatDateTime(end)}</>}</div>
         <div>Active for {formatDuration(end - start)}</div>
       </div>
       <div className="mb-2 flex items-center justify-between">
-        <span className="font-semibold text-slate-300">Articles</span>
-        <span className="rounded-full bg-slate-800 px-2 py-0.5 font-bold">{cluster.articleCount}</span>
+        <span className="font-semibold text-stone-300">Articles</span>
+        <span className="rounded-full bg-stone-800 px-2 py-0.5 font-bold">{cluster.articleCount}</span>
       </div>
       {cluster.sources?.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {cluster.sources.map(s => (
-            <span key={s.name} className="flex items-center gap-1.5 rounded-md border border-slate-700/60 bg-slate-800 px-2 py-1 text-[10px] font-medium text-slate-300">
+            <span key={s.name} className="flex items-center gap-1.5 rounded-md border border-stone-700/60 bg-stone-800 px-2 py-1 text-[10px] font-medium text-stone-300">
               <span className={`h-1.5 w-1.5 rounded-full ${sourceColor(s.name).dot}`} />
               {shortSource(s.name)} <span className="opacity-60">{s.count}</span>
             </span>

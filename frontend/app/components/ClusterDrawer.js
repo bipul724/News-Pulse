@@ -81,22 +81,22 @@ export default function ClusterDrawer({ clusterId, onClose, onPrev, onNext, posi
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-slate-900/30 backdrop-blur-[2px] animate-fade-in" onClick={onClose} />
+      <div className="fixed inset-0 z-40 bg-stone-900/30 backdrop-blur-[2px] animate-fade-in" onClick={onClose} />
 
       <aside
         role="dialog"
         aria-modal="true"
         aria-labelledby="cluster-drawer-title"
-        className="fixed right-0 top-0 z-50 flex h-full w-full flex-col border-l border-slate-200 bg-white shadow-2xl md:w-[520px] animate-slide-in"
+        className="fixed right-0 top-0 z-50 flex h-full w-full flex-col border-l border-stone-200 bg-white shadow-2xl md:w-[520px] animate-slide-in"
       >
-        <header className="border-b border-slate-200 px-6 pb-4 pt-4">
+        <header className="border-b border-stone-200 px-6 pb-4 pt-4">
           <div className="mb-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-1">
               <button
                 onClick={onPrev}
                 disabled={!onPrev}
                 aria-label="Previous topic"
-                className="h-8 w-8 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 disabled:opacity-30 disabled:hover:bg-transparent"
+                className="h-8 w-8 rounded-lg text-stone-500 hover:bg-stone-100 hover:text-stone-800 disabled:opacity-30 disabled:hover:bg-transparent"
               >
                 ←
               </button>
@@ -104,12 +104,12 @@ export default function ClusterDrawer({ clusterId, onClose, onPrev, onNext, posi
                 onClick={onNext}
                 disabled={!onNext}
                 aria-label="Next topic"
-                className="h-8 w-8 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 disabled:opacity-30 disabled:hover:bg-transparent"
+                className="h-8 w-8 rounded-lg text-stone-500 hover:bg-stone-100 hover:text-stone-800 disabled:opacity-30 disabled:hover:bg-transparent"
               >
                 →
               </button>
               {position && (
-                <span className="ml-1 text-xs font-medium tabular-nums text-slate-400">
+                <span className="ml-1 text-xs font-medium tabular-nums text-stone-400">
                   {position.index + 1} of {position.total}
                 </span>
               )}
@@ -117,7 +117,7 @@ export default function ClusterDrawer({ clusterId, onClose, onPrev, onNext, posi
             <div className="flex items-center gap-1">
               <button
                 onClick={copyLink}
-                className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-stone-600 hover:bg-stone-100"
               >
                 {copied ? '✓ Copied' : 'Copy link'}
               </button>
@@ -125,7 +125,7 @@ export default function ClusterDrawer({ clusterId, onClose, onPrev, onNext, posi
                 ref={closeRef}
                 onClick={onClose}
                 aria-label="Close"
-                className="h-8 w-8 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                className="h-8 w-8 rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-700"
               >
                 ✕
               </button>
@@ -134,12 +134,12 @@ export default function ClusterDrawer({ clusterId, onClose, onPrev, onNext, posi
 
           {loading && !cluster ? (
             <div className="animate-pulse space-y-2">
-              <div className="h-6 w-4/5 rounded bg-slate-100" />
-              <div className="h-4 w-1/2 rounded bg-slate-100" />
+              <div className="h-6 w-4/5 rounded bg-stone-100" />
+              <div className="h-4 w-1/2 rounded bg-stone-100" />
             </div>
           ) : cluster ? (
             <>
-              <h2 id="cluster-drawer-title" className="text-xl font-bold leading-tight tracking-tight text-slate-900">
+              <h2 id="cluster-drawer-title" className="font-display text-2xl font-semibold leading-tight tracking-tight text-stone-900">
                 {cluster.label}
               </h2>
               <dl className="mt-3 grid grid-cols-3 gap-2 text-xs">
@@ -147,13 +147,13 @@ export default function ClusterDrawer({ clusterId, onClose, onPrev, onNext, posi
                 <Stat label="Sources" value={sourceEntries.length} />
                 <Stat label="Active for" value={formatDuration(end - start)} />
               </dl>
-              <p className="mt-3 text-xs text-slate-500">
+              <p className="mt-3 text-xs text-stone-500">
                 {formatDateTime(start)}{end !== start && <> → {formatDateTime(end)}</>}
               </p>
 
               {sourceEntries.length > 0 && (
                 <div className="mt-4">
-                  <div className="flex h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div className="flex h-2 w-full overflow-hidden rounded-full bg-stone-100">
                     {sourceEntries.map(([name, count]) => (
                       <div key={name} className={sourceColor(name).dot} style={{ width: `${(count / articles.length) * 100}%` }} />
                     ))}
@@ -173,18 +173,18 @@ export default function ClusterDrawer({ clusterId, onClose, onPrev, onNext, posi
               )}
             </>
           ) : (
-            <h2 id="cluster-drawer-title" className="text-xl font-bold text-slate-900">Topic details</h2>
+            <h2 id="cluster-drawer-title" className="text-xl font-bold text-stone-900">Topic details</h2>
           )}
         </header>
 
-        <div className={`flex-1 overflow-y-auto bg-slate-50 px-6 py-5 custom-scrollbar transition-opacity ${loading && cluster ? 'opacity-50' : ''}`}>
+        <div className={`flex-1 overflow-y-auto bg-paper px-6 py-5 custom-scrollbar transition-opacity ${loading && cluster ? 'opacity-50' : ''}`}>
           {loading && !cluster && (
             <div className="flex animate-pulse flex-col gap-4">
               {[1, 2, 3].map(i => (
-                <div key={i} className="rounded-xl border border-slate-200 bg-white p-5">
-                  <div className="mb-3 h-4 w-16 rounded bg-slate-100" />
-                  <div className="mb-2 h-5 w-full rounded bg-slate-100" />
-                  <div className="h-5 w-3/4 rounded bg-slate-100" />
+                <div key={i} className="rounded-xl border border-stone-200 bg-white p-5">
+                  <div className="mb-3 h-4 w-16 rounded bg-stone-100" />
+                  <div className="mb-2 h-5 w-full rounded bg-stone-100" />
+                  <div className="h-5 w-3/4 rounded bg-stone-100" />
                 </div>
               ))}
             </div>
@@ -200,7 +200,7 @@ export default function ClusterDrawer({ clusterId, onClose, onPrev, onNext, posi
           )}
 
           {cluster && !error && (
-            <ol className="relative ml-2 border-l-2 border-slate-200">
+            <ol className="relative ml-2 border-l-2 border-stone-200">
               {visibleArticles.map(article => {
                 const published = new Date(article.publishedAt);
                 const showDay = article.showDay;
@@ -209,7 +209,7 @@ export default function ClusterDrawer({ clusterId, onClose, onPrev, onNext, posi
                 return (
                   <li key={article.id} className="relative pb-5 pl-6 last:pb-0">
                     {showDay && (
-                      <div className="-ml-6 mb-2 pl-6 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      <div className="-ml-6 mb-2 pl-6 text-[11px] font-bold uppercase tracking-wider text-stone-400">
                         {published.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
                       </div>
                     )}
@@ -218,21 +218,21 @@ export default function ClusterDrawer({ clusterId, onClose, onPrev, onNext, posi
                       href={article.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="group block rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-slate-300 hover:shadow-sm"
+                      className="group block rounded-xl border border-stone-200 bg-white p-4 transition-all hover:border-stone-300 hover:shadow-sm"
                     >
                       <div className="mb-2 flex items-center justify-between gap-2 text-[11px]">
                         <span className={`rounded px-1.5 py-0.5 font-bold uppercase tracking-wide ${color.soft} ${color.text}`}>
                           {shortSource(article.source)}
                         </span>
-                        <span className="font-medium tabular-nums text-slate-500">{formatTime(published)}</span>
+                        <span className="font-medium tabular-nums text-stone-500">{formatTime(published)}</span>
                       </div>
-                      <h3 className="font-semibold leading-snug text-slate-900 group-hover:text-indigo-700">
+                      <h3 className="font-semibold leading-snug text-stone-900 group-hover:text-accent-700">
                         {article.headline}
                       </h3>
                       {summary && summary !== article.headline && (
-                        <p className="mt-1.5 line-clamp-3 text-sm leading-relaxed text-slate-600">{summary}</p>
+                        <p className="mt-1.5 line-clamp-3 text-sm leading-relaxed text-stone-600">{summary}</p>
                       )}
-                      <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600">
+                      <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-accent-600">
                         Read article <span aria-hidden="true">↗</span>
                       </span>
                     </a>
@@ -243,7 +243,7 @@ export default function ClusterDrawer({ clusterId, onClose, onPrev, onNext, posi
           )}
         </div>
 
-        <footer className="hidden border-t border-slate-200 px-6 py-2 text-[11px] text-slate-400 md:block">
+        <footer className="hidden border-t border-stone-200 px-6 py-2 text-[11px] text-stone-400 md:block">
           <Kbd>←</Kbd> <Kbd>→</Kbd> switch topics · <Kbd>Esc</Kbd> close
         </footer>
       </aside>
@@ -253,9 +253,9 @@ export default function ClusterDrawer({ clusterId, onClose, onPrev, onNext, posi
 
 function Stat({ label, value }) {
   return (
-    <div className="rounded-lg bg-slate-50 px-3 py-2">
-      <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</dt>
-      <dd className="mt-0.5 text-sm font-bold text-slate-900">{value}</dd>
+    <div className="rounded-lg bg-paper px-3 py-2">
+      <dt className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">{label}</dt>
+      <dd className="mt-0.5 text-sm font-bold text-stone-900">{value}</dd>
     </div>
   );
 }
@@ -265,7 +265,7 @@ function FilterChip({ active, onClick, children }) {
     <button
       onClick={onClick}
       className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-        active ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+        active ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
       }`}
     >
       {children}
@@ -274,5 +274,5 @@ function FilterChip({ active, onClick, children }) {
 }
 
 function Kbd({ children }) {
-  return <kbd className="rounded border border-slate-200 bg-slate-50 px-1 font-sans text-[10px] text-slate-500">{children}</kbd>;
+  return <kbd className="rounded border border-stone-200 bg-paper px-1 font-sans text-[10px] text-stone-500">{children}</kbd>;
 }

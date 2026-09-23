@@ -1,8 +1,25 @@
 @import "tailwindcss";
 
+/* Newsprint palette: warm paper, ink, and one vermilion accent. */
+@theme {
+  --color-paper: #f6f4ef;
+  --color-accent-50: #fdf3ee;
+  --color-accent-100: #fae2d6;
+  --color-accent-200: #f3c1a9;
+  --color-accent-300: #e99a78;
+  --color-accent-400: #dc6d45;
+  --color-accent-500: #cc4f26;
+  --color-accent-600: #b23d1a;
+  --color-accent-700: #933116;
+  --color-accent-800: #772a17;
+  --color-accent-900: #622516;
+  --color-accent-950: #361008;
+  --font-display: var(--font-newsreader), Georgia, "Times New Roman", serif;
+}
+
 body {
-  background-color: #f8fafc;
-  color: #0f172a;
+  background-color: var(--color-paper);
+  color: #1c1917;
 }
 
 /* Subtle scrollbar */
@@ -14,11 +31,11 @@ body {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #cbd5e1;
+  background-color: #d6d3d1;
   border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: #94a3b8;
+  background-color: #a8a29e;
 }
 
 @keyframes fade-in {

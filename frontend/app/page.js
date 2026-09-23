@@ -1,24 +1,50 @@
 import Link from 'next/link';
+import { HeroPreview, LiveSources, StatusPill } from './components/LandingLive';
+import { TIER_STYLES } from './lib/format';
+
+function Icon({ children, className = 'h-5 w-5' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {children}
+    </svg>
+  );
+}
+
+const ICONS = {
+  rss: <><path d="M4 11a9 9 0 0 1 9 9" /><path d="M4 4a16 16 0 0 1 16 16" /><circle cx="5" cy="19" r="1" /></>,
+  code: <path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14" />,
+  database: <><ellipse cx="12" cy="5" rx="8" ry="3" /><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5" /><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" /></>,
+  server: <><rect x="3" y="4" width="18" height="7" rx="2" /><rect x="3" y="13" width="18" height="7" rx="2" /><path d="M7 7.5h.01M7 16.5h.01" /></>,
+  window: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M7 6.5h.01M10 6.5h.01" /></>,
+  cluster: <><circle cx="6" cy="6" r="2.5" /><circle cx="18" cy="8" r="2.5" /><circle cx="10" cy="18" r="2.5" /><path d="M8.4 6.4 15.6 7.6M6.8 8.4l2.4 7.2M16.6 10.2l-5 6" /></>,
+  timeline: <path d="M4 6h9M8 12h12M6 18h7" strokeWidth="2.6" />,
+  filter: <path d="M3 5h18l-7 8v6l-4-2v-4z" />,
+  refresh: <><path d="M20 12a8 8 0 1 1-2.3-5.7L20 8.5" /><path d="M20 4v4.5h-4.5" /></>,
+};
 
 function Navbar() {
   return (
-    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <nav className="sticky top-0 z-50 border-b border-stone-200/80 bg-paper/90 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-8">
-          <Link href="/" className="text-xl font-bold tracking-tight text-slate-900">
+          <Link href="/" className="flex items-center gap-2 font-display text-xl font-semibold tracking-tight text-stone-900">
+            <PulseMark />
             News Pulse
           </Link>
-          <div className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
-            <a href="#how-it-works" className="hover:text-slate-900 transition-colors">How it works</a>
-            <a href="#features" className="hover:text-slate-900 transition-colors">Features</a>
+          <div className="hidden items-center gap-6 text-sm font-medium text-stone-600 md:flex">
+            <a href="#features" className="transition-colors hover:text-stone-900">Features</a>
+            <a href="#architecture" className="transition-colors hover:text-stone-900">How it works</a>
+            <a href="#reading" className="transition-colors hover:text-stone-900">Reading the timeline</a>
+            <a href="#sources" className="transition-colors hover:text-stone-900">Sources</a>
           </div>
         </div>
-        <div>
-          <Link 
-            href="/timeline" 
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+        <div className="flex items-center gap-3">
+          <StatusPill />
+          <Link
+            href="/timeline"
+            className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-stone-800"
           >
-            Explore Timeline &rarr;
+            Open timeline →
           </Link>
         </div>
       </div>
@@ -26,116 +52,48 @@ function Navbar() {
   );
 }
 
-function TimelinePreview() {
+function PulseMark() {
   return (
-    <div className="bg-white rounded-xl shadow-2xl shadow-indigo-100/50 border border-slate-200 overflow-hidden relative w-full h-[280px] flex flex-col max-w-4xl mx-auto mt-12 transform perspective-1000 rotate-x-2 scale-95 origin-top transition-transform hover:scale-100 duration-500 cursor-default select-none">
-      <div className="px-4 py-3 border-b border-slate-100 bg-white flex justify-between items-center shrink-0">
-        <div className="flex gap-2 items-center">
-           <div className="w-2.5 h-2.5 rounded-full bg-slate-200"></div>
-           <div className="w-2.5 h-2.5 rounded-full bg-slate-200"></div>
-           <div className="w-2.5 h-2.5 rounded-full bg-slate-200"></div>
-        </div>
-        <div className="text-[10px] font-semibold text-slate-400 tracking-wider uppercase">Live Preview</div>
-      </div>
-      <div className="relative flex-1 flex flex-col bg-slate-50/50">
-        {/* Time Axis */}
-        <div className="h-8 border-b border-slate-200 bg-white/90 z-10 flex items-end px-4">
-          {['09:00', '12:00', '15:00', '18:00', '21:00'].map((time, i) => (
-            <div key={i} className="absolute flex flex-col items-center transform -translate-x-1/2" style={{ left: `${15 + i * 20}%`}}>
-              <span className="text-[9px] font-semibold text-slate-400 mb-1 tracking-wider">{time}</span>
-              <div className="w-px h-1.5 bg-slate-300"></div>
-            </div>
-          ))}
-        </div>
-        
-        {/* Vertical Grid */}
-        <div className="absolute top-8 bottom-0 left-4 right-4 pointer-events-none">
-          {[15, 35, 55, 75, 95].map((pos, i) => (
-            <div key={i} className="absolute top-0 bottom-0 w-px bg-slate-200/50" style={{ left: `${pos}%` }}></div>
-          ))}
-        </div>
-
-        {/* Lanes */}
-        <div className="relative flex-1 p-4 overflow-hidden">
-          {/* High Activity */}
-          <div className="absolute top-4 h-10 bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-md shadow-sm flex flex-col justify-center px-2.5 z-10" style={{ left: '10%', width: '35%' }}>
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-400"></div>
-            <span className="text-[11px] font-bold leading-tight">Global Markets / Rate Cuts</span>
-            <span className="text-[9px] font-medium opacity-80">12 articles</span>
-          </div>
-
-          {/* Medium Activity */}
-          <div className="absolute top-16 h-8 bg-slate-50 border border-slate-200 text-slate-800 rounded-md flex flex-col justify-center px-2 z-10" style={{ left: '28%', width: '22%' }}>
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-slate-400"></div>
-            <span className="text-[10px] font-bold leading-tight truncate">UN General Assembly</span>
-            <span className="text-[8px] font-medium opacity-80">8 articles</span>
-          </div>
-
-          {/* Standard Activity */}
-          <div className="absolute top-28 h-8 bg-white border border-slate-300 text-slate-700 shadow-sm rounded-md flex flex-col justify-center px-2 z-10" style={{ left: '55%', width: '30%' }}>
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-slate-300"></div>
-            <span className="text-[10px] font-bold leading-tight truncate">Tech Policy Regulations</span>
-            <span className="text-[8px] font-medium opacity-80">5 articles</span>
-          </div>
-          
-          {/* Small Activity */}
-          <div className="absolute top-40 h-8 bg-white border border-slate-300 text-slate-700 shadow-sm rounded-md flex flex-col justify-center px-2 z-10" style={{ left: '70%', width: '15%' }}>
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-slate-300"></div>
-            <span className="text-[10px] font-bold leading-tight truncate">Space Exploration</span>
-            <span className="text-[8px] font-medium opacity-80">2 articles</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <span className="flex h-7 w-7 items-center justify-center rounded-md bg-stone-900 text-accent-400">
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M3 12h4l2.5-6 5 12 2.5-6h4" />
+      </svg>
+    </span>
   );
 }
 
 function Hero() {
   return (
-    <section className="pt-24 pb-16 px-4 text-center overflow-hidden">
-      <div className="max-w-4xl mx-auto flex flex-col items-center">
-        <p className="text-[11px] font-bold tracking-widest text-indigo-600 uppercase mb-4 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
-          Live News Intelligence
+    <section className="relative overflow-hidden px-4 pb-24 pt-20 text-center sm:pt-24">
+      <div className="mx-auto flex max-w-4xl flex-col items-center">
+        <p className="mb-6 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-accent-600">
+          <span className="h-1.5 w-1.5 rounded-full bg-accent-500" />
+          RSS → topic clusters → timeline
         </p>
-        <h1 className="text-4xl md:text-6xl font-extrabold text-slate-900 tracking-tight mb-6 leading-tight">
-          See how the world&apos;s <br className="hidden md:block" />
-          stories evolve over time.
+        <h1 className="mb-6 font-display text-5xl font-medium leading-[1.02] tracking-tight text-stone-900 sm:text-6xl md:text-7xl">
+          See how the world&apos;s stories
+          <span className="block italic text-accent-600">rise, overlap and fade.</span>
         </h1>
-        <p className="text-lg text-slate-600 max-w-2xl mb-10 leading-relaxed">
-          News Pulse brings together live articles from multiple news sources, groups related stories into topic clusters, and turns them into an interactive visual timeline.
+        <p className="mb-10 max-w-2xl text-lg leading-relaxed text-stone-600">
+          News Pulse pulls live articles from BBC, NPR and The New York Times, groups the ones about the same event,
+          and lays each topic out on a timeline from its first article to its latest.
         </p>
-        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-          <Link 
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+          <Link
             href="/timeline"
-            className="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl text-center"
+            className="rounded-lg bg-stone-900 px-6 py-3 text-center font-semibold text-white transition-colors hover:bg-stone-800"
           >
-            Explore Live Timeline
+            Explore the live timeline
           </Link>
-          <a 
-            href="#how-it-works"
-            className="px-6 py-3 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg font-semibold transition-colors text-center"
+          <a
+            href="#architecture"
+            className="rounded-lg border border-stone-300 bg-transparent px-6 py-3 text-center font-semibold text-stone-700 transition-colors hover:bg-white"
           >
-            See How It Works
+            How it works
           </a>
         </div>
       </div>
-      <TimelinePreview />
-    </section>
-  );
-}
-
-function TrustStatement() {
-  return (
-    <section className="py-16 px-4 bg-slate-50 border-y border-slate-200">
-      <div className="max-w-3xl mx-auto text-center">
-        <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4">
-          News moves fast. <br className="md:hidden" />
-          Understanding how stories connect is harder.
-        </h2>
-        <p className="text-slate-600 text-lg leading-relaxed">
-          News Pulse turns scattered articles into a visual story of what is happening, when it started, and how long it remained active in the global news cycle.
-        </p>
-      </div>
+      <HeroPreview />
     </section>
   );
 }
@@ -143,67 +101,46 @@ function TrustStatement() {
 function Features() {
   const features = [
     {
-      title: "Live News Ingestion",
-      desc: "Collect articles from multiple public RSS sources as they are published.",
-      icon: "📡"
+      icon: 'rss',
+      title: 'Live ingestion',
+      desc: 'Feeds are fetched, normalized into one schema and deduplicated by URL, so re-running is safe.',
     },
     {
-      title: "Topic Clustering",
-      desc: "Related articles are grouped into meaningful topic clusters using TF-IDF similarity.",
-      icon: "🔗"
+      icon: 'cluster',
+      title: 'Topic clustering',
+      desc: 'Headlines and summaries are compared with TF-IDF and cosine similarity to group coverage of the same event.',
     },
     {
-      title: "Timeline Intelligence",
-      desc: "See when a topic started, how long it remained active, and how many articles covered it.",
-      icon: "📊"
+      icon: 'timeline',
+      title: 'Timeline view',
+      desc: 'Every topic spans its first to latest article. Colour shows how heavily it was covered.',
     },
     {
-      title: "Source Exploration",
-      desc: "Filter stories by source and inspect the individual articles behind each cluster.",
-      icon: "🔍"
-    }
+      icon: 'filter',
+      title: 'Explore by source',
+      desc: 'Search, filter by outlet or time range, and open any topic to read the articles behind it.',
+    },
   ];
 
   return (
-    <section id="features" className="py-24 px-4 max-w-7xl mx-auto">
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-        {features.map((f, i) => (
-          <div key={i} className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-            <div className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-center text-xl mb-4">
-              {f.icon}
-            </div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">{f.title}</h3>
-            <p className="text-slate-600 text-sm leading-relaxed">{f.desc}</p>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function HowItWorks() {
-  const steps = [
-    { step: "01", title: "Collect", desc: "News Pulse fetches articles from multiple RSS feeds." },
-    { step: "02", title: "Understand", desc: "Articles are normalized and related stories are grouped using TF-IDF similarity." },
-    { step: "03", title: "Organize", desc: "Clusters are stored and structured for timeline visualization." },
-    { step: "04", title: "Explore", desc: "Users interact with the timeline and inspect the stories behind each topic." }
-  ];
-
-  return (
-    <section id="how-it-works" className="py-24 px-4 bg-slate-900 text-white">
-      <div className="max-w-6xl mx-auto">
-        <h2 className="text-3xl font-bold mb-16 text-center tracking-tight">How It Works</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 relative">
-          {/* Connecting Line (Desktop) */}
-          <div className="hidden lg:block absolute top-6 left-[10%] right-[10%] h-px bg-slate-700"></div>
-          
-          {steps.map((s, i) => (
-            <div key={i} className="relative z-10 flex flex-col items-center lg:items-start text-center lg:text-left">
-              <div className="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center font-bold mb-6 text-indigo-50 border-4 border-slate-900">
-                {s.step}
+    <section id="features" className="scroll-mt-20 border-y border-stone-200 bg-white px-4 py-24">
+      <div className="mx-auto max-w-6xl">
+        <div className="mx-auto mb-14 max-w-2xl text-center">
+          <h2 className="mb-4 font-display text-4xl font-medium tracking-tight text-stone-900">
+            News moves fast. Seeing how stories connect is harder.
+          </h2>
+          <p className="text-lg text-stone-600">
+            Instead of another feed of headlines, News Pulse shows what is happening, when it started, and how long it stayed in the news.
+          </p>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {features.map(f => (
+            <div key={f.title} className="rounded-xl border border-stone-200 bg-paper p-6 transition-colors hover:border-stone-300">
+              <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-lg border border-stone-300 bg-white text-accent-600">
+                <Icon>{ICONS[f.icon]}</Icon>
               </div>
-              <h3 className="text-xl font-semibold mb-3">{s.title}</h3>
-              <p className="text-slate-400 text-sm leading-relaxed max-w-xs">{s.desc}</p>
+              <h3 className="mb-2 font-semibold text-stone-900">{f.title}</h3>
+              <p className="text-sm leading-relaxed text-stone-600">{f.desc}</p>
             </div>
           ))}
         </div>
@@ -212,146 +149,216 @@ function HowItWorks() {
   );
 }
 
-function TimelineExplanation() {
+function Architecture() {
+  const stages = [
+    { icon: 'rss', folder: 'feeds', title: 'RSS feeds', tech: 'BBC · NPR · NYT', points: ['Public world-news feeds', 'Headline, summary, link, time'] },
+    { icon: 'code', folder: '/scraper', title: 'Python scraper', tech: 'feedparser · trafilatura · scikit-learn', points: ['Normalize and deduplicate', 'Extract full text where allowed', 'TF-IDF + cosine clustering'] },
+    { icon: 'database', folder: 'PostgreSQL', title: 'Database', tech: 'Article · Cluster', points: ['Articles linked to clusters', 'Idempotent inserts by URL'] },
+    { icon: 'server', folder: '/backend', title: 'REST API', tech: 'Express · Prisma', points: ['Timeline and cluster endpoints', 'Runs and tracks ingestion jobs'] },
+    { icon: 'window', folder: '/frontend', title: 'Web app', tech: 'Next.js · React', points: ['Interactive timeline', 'Filters, search, topic drawer'] },
+  ];
+
+  const endpoints = [
+    ['GET', '/timeline', 'Topics with start, end, article count and sources'],
+    ['GET', '/clusters/:id', 'One topic with its articles'],
+    ['POST', '/ingest/trigger', 'Start a scraper run in the background'],
+    ['GET', '/ingest/status/:jobId', 'Poll until the run completes'],
+  ];
+
   return (
-    <section className="py-24 px-4 max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-16">
-      <div className="flex-1 space-y-6">
-        <h2 className="text-3xl font-bold text-slate-900 tracking-tight">
-          Not just what happened. <br className="hidden sm:block" />
-          When it happened.
-        </h2>
-        <p className="text-slate-600 text-lg leading-relaxed">
-          The timeline is designed for rapid news comprehension. Each block represents a distinct topic cluster.
-        </p>
-        <ul className="space-y-4 text-sm text-slate-700">
-          <li className="flex items-start gap-3">
-            <span className="text-indigo-600 font-bold mt-0.5">&rarr;</span>
-            <span><strong>Position</strong> represents when the topic first appeared in the cycle.</span>
-          </li>
-          <li className="flex items-start gap-3">
-            <span className="text-indigo-600 font-bold mt-0.5">&rarr;</span>
-            <span><strong>Width</strong> represents how long the topic remained actively covered.</span>
-          </li>
-          <li className="flex items-start gap-3">
-            <span className="text-indigo-600 font-bold mt-0.5">&rarr;</span>
-            <span><strong>Article count</strong> and visual intensity reflect the total volume of coverage.</span>
-          </li>
-        </ul>
-      </div>
-      <div className="flex-1 w-full bg-slate-50 border border-slate-200 rounded-2xl p-8 shadow-inner relative flex justify-center">
-         <div className="w-full max-w-sm flex flex-col gap-4">
-            <div className="h-12 w-full bg-white border border-slate-300 rounded-lg shadow-sm flex flex-col justify-center px-4 relative">
-               <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-slate-400 rounded-l-lg"></div>
-               <span className="text-xs font-bold text-slate-800">Standard Coverage</span>
-               <span className="text-[10px] text-slate-500">Short duration, normal volume</span>
+    <section id="architecture" className="scroll-mt-16 bg-stone-950 px-4 py-24 text-white">
+      <div className="mx-auto max-w-6xl">
+        <div className="mx-auto mb-16 max-w-2xl text-center">
+          <p className="mb-3 text-xs font-bold uppercase tracking-widest text-accent-400">How it works</p>
+          <h2 className="mb-4 font-display text-4xl font-medium tracking-tight">From feed to timeline in five steps</h2>
+          <p className="text-stone-400">
+            Three separate services, each with one job: Python collects and groups, Node serves, Next.js visualizes.
+          </p>
+        </div>
+
+        <ol className="grid gap-4 md:grid-cols-5">
+          {stages.map((s, i) => (
+            <li key={s.title} className="relative">
+              {i < stages.length - 1 && (
+                <span className="absolute -right-3 top-9 z-10 hidden text-stone-600 md:block" aria-hidden="true">→</span>
+              )}
+              <div className="h-full rounded-xl border border-stone-800 bg-stone-900/60 p-5">
+                <div className="mb-4 flex items-center justify-between">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-500/10 text-accent-300 ring-1 ring-accent-500/20">
+                    <Icon>{ICONS[s.icon]}</Icon>
+                  </span>
+                  <span className="font-mono text-[10px] text-stone-500">{s.folder}</span>
+                </div>
+                <h3 className="font-semibold">{s.title}</h3>
+                <p className="mt-1 text-xs font-medium text-accent-300/90">{s.tech}</p>
+                <ul className="mt-4 space-y-1.5 text-xs leading-relaxed text-stone-400">
+                  {s.points.map(p => <li key={p}>{p}</li>)}
+                </ul>
+              </div>
+            </li>
+          ))}
+        </ol>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-5">
+          <div className="rounded-xl border border-stone-800 bg-stone-900/60 p-6 lg:col-span-2">
+            <div className="mb-4 flex items-center gap-2 font-semibold">
+              <Icon className="h-4 w-4 text-accent-300">{ICONS.refresh}</Icon>
+              What &ldquo;Refresh Data&rdquo; does
             </div>
-            <div className="h-16 w-3/4 bg-indigo-50 border border-indigo-200 rounded-lg shadow-sm flex flex-col justify-center px-4 relative ml-auto">
-               <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-indigo-400 rounded-l-lg"></div>
-               <span className="text-xs font-bold text-indigo-900">High Intensity</span>
-               <span className="text-[10px] text-indigo-600/80">Extended duration, high volume</span>
-            </div>
-         </div>
+            <ol className="space-y-3 text-sm text-stone-400">
+              {[
+                'The app asks the API to start an ingestion job.',
+                'The API launches the Python scraper in the background.',
+                'The scraper stores new articles and rebuilds the clusters.',
+                'The app polls the job status, then reloads the timeline.',
+              ].map((step, i) => (
+                <li key={step} className="flex gap-3">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent-600 text-[10px] font-bold text-white">{i + 1}</span>
+                  {step}
+                </li>
+              ))}
+            </ol>
+          </div>
+          <div className="overflow-hidden rounded-xl border border-stone-800 bg-stone-900/60 lg:col-span-3">
+            <div className="border-b border-stone-800 px-6 py-4 font-semibold">API endpoints</div>
+            <ul className="divide-y divide-stone-800">
+              {endpoints.map(([method, path, desc]) => (
+                <li key={path} className="flex flex-col gap-1 px-6 py-3 sm:flex-row sm:items-center sm:gap-4">
+                  <code className="flex shrink-0 items-center gap-2 font-mono text-sm sm:w-56">
+                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${method === 'POST' ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'}`}>
+                      {method}
+                    </span>
+                    <span className="text-stone-200">{path}</span>
+                  </code>
+                  <span className="text-sm text-stone-400">{desc}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </div>
     </section>
   );
 }
 
-function SourcesSection() {
+function ReadingTheTimeline() {
+  const rows = [
+    { tier: 'high', left: 6, width: 58, label: 'Summit talks', count: 13, inside: true },
+    { tier: 'medium', left: 30, width: 26, label: 'Trade dispute', count: 6 },
+    { tier: 'low', left: 70, width: 3, label: 'Breaking: earthquake', count: 1 },
+  ];
+  const legend = [
+    { tier: 'high', label: 'Heavy coverage' },
+    { tier: 'medium', label: 'Moderate' },
+    { tier: 'low', label: 'Light' },
+  ];
+
   return (
-    <section className="py-16 px-4 bg-slate-50 border-t border-slate-200 text-center">
-      <div className="max-w-3xl mx-auto">
-        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-8">Aggregating Global Perspectives</h3>
-        <div className="flex flex-wrap justify-center gap-4 sm:gap-8 opacity-70 grayscale">
-          <span className="text-xl font-bold font-serif">BBC News</span>
-          <span className="text-xl font-bold font-sans">NPR</span>
-          <span className="text-xl font-bold font-serif italic">New York Times</span>
+    <section id="reading" className="scroll-mt-16 px-4 py-24">
+      <div className="mx-auto flex max-w-6xl flex-col items-center gap-14 lg:flex-row">
+        <div className="flex-1 space-y-6">
+          <p className="text-xs font-bold uppercase tracking-widest text-accent-600">Reading the timeline</p>
+          <h2 className="font-display text-4xl font-medium tracking-tight text-stone-900">
+            Not just what happened.
+            <br />
+            When, and for how long.
+          </h2>
+          <p className="text-lg leading-relaxed text-stone-600">
+            Each bar is one topic cluster. Read it the way you read a calendar.
+          </p>
+          <dl className="space-y-4 text-sm">
+            {[
+              ['Position', 'when the first article about the topic was published.'],
+              ['Length', 'how long the story kept getting new coverage.'],
+              ['Colour', 'how many articles it gathered compared with the biggest story.'],
+              ['Top rows', 'the biggest stories are always placed first.'],
+            ].map(([term, desc]) => (
+              <div key={term} className="flex gap-3">
+                <dt className="w-20 shrink-0 font-semibold text-stone-900">{term}</dt>
+                <dd className="text-stone-600">{desc}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+
+        <div className="w-full flex-1">
+          <div className="rounded-xl border border-stone-300 bg-white p-6">
+            <div className="mb-4 flex justify-between border-b border-stone-100 pb-2 text-[10px] font-medium text-stone-400">
+              <span>Mon</span><span>Tue</span><span>Wed</span>
+            </div>
+            <div className="space-y-3">
+              {rows.map(r => {
+                const styles = TIER_STYLES[r.tier];
+                return (
+                  <div key={r.label} className="relative h-8">
+                    <div className={`absolute flex h-8 items-center gap-2 rounded-md border px-3 shadow-sm ${styles.bar}`} style={{ left: `${r.left}%`, width: `${r.width}%` }}>
+                      {r.inside && (
+                        <>
+                          <span className="truncate text-xs font-semibold">{r.label}</span>
+                          <span className={`ml-auto rounded px-1.5 text-[10px] font-bold ${styles.badge}`}>{r.count}</span>
+                        </>
+                      )}
+                    </div>
+                    {!r.inside && (
+                      <div className="absolute flex h-8 items-center gap-1.5 pl-2 text-xs font-semibold text-stone-700" style={{ left: `${r.left + r.width}%` }}>
+                        {r.label}
+                        {r.count > 1 && <span className="rounded bg-stone-100 px-1.5 text-[10px] font-bold text-stone-600">{r.count}</span>}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 border-t border-stone-100 pt-4 text-[11px] text-stone-500">
+              {legend.map(l => (
+                <span key={l.tier} className="flex items-center gap-1.5">
+                  <span className={`h-2.5 w-4 rounded-sm border ${TIER_STYLES[l.tier].bar}`} />
+                  {l.label}
+                </span>
+              ))}
+            </div>
+          </div>
+          <p className="mt-3 text-center text-xs text-stone-400">
+            Short topics show their title beside the bar so every label stays readable.
+          </p>
         </div>
       </div>
     </section>
   );
 }
 
-function ProductPreviewSection() {
+function Sources() {
   return (
-    <section className="py-24 px-4 bg-slate-100 overflow-hidden">
-      <div className="max-w-6xl mx-auto text-center mb-16">
-        <h2 className="text-3xl font-bold text-slate-900 tracking-tight mb-4">A clearer way to read the news</h2>
-        <p className="text-slate-600 max-w-2xl mx-auto text-lg">
-          Dive into the complete dashboard to filter sources, explore raw timelines, and inspect individual articles behind every topic.
+    <section id="sources" className="scroll-mt-16 border-t border-stone-200 bg-white px-4 py-20 text-center">
+      <div className="mx-auto mb-10 max-w-2xl">
+        <p className="mb-3 text-xs font-bold uppercase tracking-widest text-stone-400">Sources</p>
+        <h2 className="mb-3 font-display text-3xl font-medium tracking-tight text-stone-900">Three newsrooms, one view</h2>
+        <p className="text-stone-600">
+          Stories covered by more than one outlet merge into a single topic, so you can compare how each one reported it.
+          Paywalled sites contribute their RSS headline and summary.
         </p>
       </div>
-      
-      <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col relative">
-        {/* Mock App Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <div className="font-bold text-slate-800">News Pulse</div>
-          <div className="px-3 py-1 bg-slate-900 text-white text-xs font-bold rounded flex items-center gap-2">
-            ↻ Refresh Data
-          </div>
-        </div>
-        
-        {/* Mock App Body */}
-        <div className="flex-1 p-6 flex flex-col gap-6">
-          <div className="flex gap-2">
-            <span className="px-3 py-1 bg-slate-800 text-white text-xs rounded-full">BBC News · 32</span>
-            <span className="px-3 py-1 bg-white border border-slate-200 text-slate-600 text-xs rounded-full">NPR · 14</span>
-            <span className="px-3 py-1 bg-white border border-slate-200 text-slate-600 text-xs rounded-full">New York Times · 41</span>
-          </div>
-          
-          <div className="h-64 border border-slate-200 rounded-xl bg-slate-50/50 relative overflow-hidden flex">
-            {/* Timeline Area */}
-            <div className="flex-1 p-4 relative">
-               <div className="absolute top-4 left-4 h-8 bg-indigo-50 border border-indigo-200 rounded text-xs flex items-center px-2 text-indigo-900 font-bold" style={{ width: '60%'}}>Global Markets</div>
-               <div className="absolute top-16 left-24 h-8 bg-white border border-slate-200 rounded text-xs flex items-center px-2 shadow-sm text-slate-800 font-bold" style={{ width: '40%'}}>Election Updates</div>
-            </div>
-            
-            {/* Drawer Area */}
-            <div className="w-64 bg-white border-l border-slate-200 shadow-xl flex flex-col">
-              <div className="p-4 border-b border-slate-100">
-                <div className="font-bold text-sm text-slate-800 mb-1">Global Markets</div>
-                <div className="text-[10px] text-slate-500 uppercase">12 Articles</div>
-              </div>
-              <div className="p-4 flex flex-col gap-3">
-                <div className="p-3 border border-slate-100 rounded-lg bg-slate-50">
-                  <div className="text-[9px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded inline-block mb-1 font-bold">BBC NEWS</div>
-                  <div className="text-xs font-semibold">Markets rally after rate cut...</div>
-                </div>
-                <div className="p-3 border border-slate-100 rounded-lg bg-slate-50">
-                  <div className="text-[9px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded inline-block mb-1 font-bold">NPR</div>
-                  <div className="text-xs font-semibold">Federal reserve shifts tone...</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <div className="text-center mt-12">
-        <Link 
-          href="/timeline"
-          className="text-indigo-600 font-bold hover:text-indigo-800 transition-colors inline-flex items-center gap-1"
-        >
-          Open Live Timeline &rarr;
-        </Link>
-      </div>
+      <LiveSources />
     </section>
   );
 }
 
 function CTASection() {
   return (
-    <section className="py-24 px-4 bg-white text-center">
-      <div className="max-w-2xl mx-auto">
-        <h2 className="text-4xl font-bold text-slate-900 mb-6 tracking-tight">See the news differently.</h2>
-        <p className="text-lg text-slate-600 mb-10">
-          Explore the live News Pulse timeline and follow stories as they develop across major publishers.
-        </p>
-        <Link 
-          href="/timeline"
-          className="inline-flex items-center justify-center px-8 py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold transition-all shadow-xl hover:shadow-2xl"
-        >
-          Explore Live Timeline &rarr;
-        </Link>
+    <section className="px-4 py-24">
+      <div className="relative mx-auto max-w-4xl overflow-hidden rounded-xl bg-stone-900 px-8 py-16 text-center">
+        <div className="relative">
+          <h2 className="mb-4 font-display text-4xl font-medium tracking-tight text-white sm:text-5xl">See the news cycle as it happens.</h2>
+          <p className="mx-auto mb-8 max-w-xl text-stone-300">
+            Open the timeline, hit Refresh Data to pull the latest articles, and click any topic to read the coverage behind it.
+          </p>
+          <Link
+            href="/timeline"
+            className="inline-flex items-center justify-center rounded-lg bg-accent-500 px-7 py-3.5 font-semibold text-white transition-colors hover:bg-accent-400"
+          >
+            Open the live timeline →
+          </Link>
+        </div>
       </div>
     </section>
   );
@@ -359,15 +366,19 @@ function CTASection() {
 
 function Footer() {
   return (
-    <footer className="border-t border-slate-200 bg-slate-50 py-12 px-4">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-        <div>
-          <h4 className="font-bold text-slate-900 text-lg">News Pulse</h4>
-          <p className="text-sm text-slate-500">Topic-clustered news timeline</p>
+    <footer className="border-t border-stone-200 px-4 py-10">
+      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 md:flex-row">
+        <div className="flex items-center gap-3">
+          <PulseMark />
+          <div>
+            <div className="font-bold text-stone-900">News Pulse</div>
+            <p className="text-xs text-stone-500">Topic-clustered news timeline</p>
+          </div>
         </div>
-        <div className="flex gap-6 text-sm font-medium text-slate-600">
-          <Link href="/timeline" className="hover:text-slate-900">Timeline</Link>
-          <a href="#how-it-works" className="hover:text-slate-900">How it works</a>
+        <div className="flex gap-6 text-sm font-medium text-stone-600">
+          <Link href="/timeline" className="hover:text-stone-900">Timeline</Link>
+          <a href="#architecture" className="hover:text-stone-900">How it works</a>
+          <a href="#sources" className="hover:text-stone-900">Sources</a>
         </div>
       </div>
     </footer>
@@ -376,16 +387,14 @@ function Footer() {
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 scroll-smooth">
+    <div className="min-h-screen scroll-smooth bg-paper text-stone-900 selection:bg-accent-100 selection:text-accent-900">
       <Navbar />
       <main>
         <Hero />
-        <TrustStatement />
         <Features />
-        <HowItWorks />
-        <ProductPreviewSection />
-        <TimelineExplanation />
-        <SourcesSection />
+        <Architecture />
+        <ReadingTheTimeline />
+        <Sources />
         <CTASection />
       </main>
       <Footer />

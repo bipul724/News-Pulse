@@ -99,7 +99,7 @@ export default function RefreshButton({ onRefreshComplete, apiUrl }) {
         <span className="text-red-500 text-sm font-medium">{errorMsg}</span>
         <button 
           onClick={handleRefresh}
-          className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg text-sm font-medium transition-colors"
+          className="px-4 py-2 bg-stone-200 hover:bg-stone-300 text-stone-800 rounded-lg text-sm font-medium transition-colors"
         >
           Retry
         </button>
@@ -111,7 +111,7 @@ export default function RefreshButton({ onRefreshComplete, apiUrl }) {
     return (
       <button 
         disabled
-        className="px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-lg text-sm font-semibold flex items-center gap-2"
+        className="px-4 py-2 bg-accent-50 text-accent-700 border border-accent-100 rounded-lg text-sm font-semibold flex items-center gap-2"
       >
         <span className="animate-spin inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full" />
         Refreshing news…
@@ -134,7 +134,7 @@ export default function RefreshButton({ onRefreshComplete, apiUrl }) {
   return (
     <button 
       onClick={handleRefresh}
-      className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-bold shadow-sm transition-colors flex items-center gap-2"
+      className="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-sm font-bold shadow-sm transition-colors flex items-center gap-2"
     >
       ↻ Refresh Data
     </button>
